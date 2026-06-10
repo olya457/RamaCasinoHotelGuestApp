@@ -6,7 +6,8 @@ import {MainNavigator} from './MainNavigator';
 import {colors} from '../theme/theme';
 import {loadJSON, saveJSON, storageKeys} from '../storage/storage';
 import {usePersistentState} from '../storage/usePersistentState';
-import type {CartState, ClimateSettings, GuestRequest} from '../types/app';
+import {GuestProfileProvider, defaultGuestProfile} from '../context/GuestProfileContext';
+import type {CartState, ClimateSettings, GuestProfile, GuestRequest} from '../types/app';
 
 type Stage = 'splash' | 'onboarding' | 'main';
 
@@ -25,6 +26,10 @@ export function AppNavigator(): React.JSX.Element {
   const [cart, setCart] = usePersistentState<CartState>(storageKeys.cart, emptyCart);
   const [requests, setRequests] = usePersistentState<GuestRequest[]>(storageKeys.requests, emptyRequests);
   const [climate, setClimate] = usePersistentState<ClimateSettings>(storageKeys.climate, defaultClimate);
+  const [guestProfile, setGuestProfile] = usePersistentState<GuestProfile>(
+    storageKeys.guestProfile,
+    defaultGuestProfile,
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -41,6 +46,12 @@ export function AppNavigator(): React.JSX.Element {
     };
   }, []);
 
+  useEffect(() => {
+    if (guestProfile.room === '2024') {
+      setGuestProfile(current => (current.room === '2024' ? {...current, room: ''} : current));
+    }
+  }, [guestProfile.room, setGuestProfile]);
+
   const completeOnboarding = async () => {
     await saveJSON(storageKeys.onboardingComplete, true);
     setStage('main');
@@ -52,14 +63,16 @@ export function AppNavigator(): React.JSX.Element {
       {stage === 'splash' ? <SplashScreen /> : null}
       {stage === 'onboarding' ? <OnboardingScreen onDone={completeOnboarding} /> : null}
       {stage === 'main' ? (
-        <MainNavigator
-          cart={cart}
-          setCart={setCart}
-          requests={requests}
-          setRequests={setRequests}
-          climate={climate}
-          setClimate={setClimate}
-        />
+        <GuestProfileProvider profile={guestProfile} setProfile={setGuestProfile}>
+          <MainNavigator
+            cart={cart}
+            setCart={setCart}
+            requests={requests}
+            setRequests={setRequests}
+            climate={climate}
+            setClimate={setClimate}
+          />
+        </GuestProfileProvider>
       ) : null}
     </>
   );

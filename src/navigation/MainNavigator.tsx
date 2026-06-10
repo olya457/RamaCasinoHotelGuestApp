@@ -10,7 +10,9 @@ import {RequestFormScreen} from '../screens/RequestFormScreen';
 import {TrackRequestsScreen} from '../screens/TrackRequestsScreen';
 import {ClimateScreen} from '../screens/ClimateScreen';
 import {EntertainmentScreen} from '../screens/EntertainmentScreen';
+import {AmenityDetailScreen} from '../screens/AmenityDetailScreen';
 import {TravelScreen} from '../screens/TravelScreen';
+import {TravelLocationDetailScreen} from '../screens/TravelLocationDetailScreen';
 import {MapScreen} from '../screens/MapScreen';
 import {colors} from '../theme/theme';
 import type {AppRoute, CartState, ClimateSettings, GuestRequest, MainTab} from '../types/app';
@@ -45,6 +47,12 @@ export function MainNavigator({
     }
     if (route.name === 'requestForm' || route.name === 'trackRequests') {
       return 'requests';
+    }
+    if (route.name === 'amenityDetail') {
+      return 'entertainment';
+    }
+    if (route.name === 'travelLocationDetail') {
+      return 'travel';
     }
     return 'room';
   }, [route]);
@@ -91,7 +99,11 @@ export function MainNavigator({
           />
         );
       case 'trackRequests':
-        return <TrackRequestsScreen requests={requests} onBack={goBack} />;
+        return <TrackRequestsScreen requests={requests} setRequests={setRequests} onBack={goBack} />;
+      case 'amenityDetail':
+        return <AmenityDetailScreen amenityId={route.amenityId} onBack={goBack} />;
+      case 'travelLocationDetail':
+        return <TravelLocationDetailScreen locationId={route.locationId} onBack={goBack} onViewOnMap={showMapLocation} />;
       case 'tab':
         if (route.tab === 'room') {
           return <RoomServiceScreen onOpenCategory={categoryId => push({name: 'roomCategory', categoryId})} />;
@@ -105,15 +117,21 @@ export function MainNavigator({
           );
         }
         if (route.tab === 'entertainment') {
-          return <EntertainmentScreen />;
+          return <EntertainmentScreen onOpenAmenity={amenityId => push({name: 'amenityDetail', amenityId})} />;
         }
         if (route.tab === 'climate') {
           return <ClimateScreen climate={climate} setClimate={setClimate} />;
         }
         if (route.tab === 'travel') {
-          return <TravelScreen onViewOnMap={showMapLocation} />;
+          return <TravelScreen onViewOnMap={showMapLocation} onOpenDetails={locationId => push({name: 'travelLocationDetail', locationId})} />;
         }
-        return <MapScreen selectedLocationId={selectedLocationId} onSelectLocation={setSelectedLocationId} />;
+        return (
+          <MapScreen
+            selectedLocationId={selectedLocationId}
+            onSelectLocation={setSelectedLocationId}
+            onOpenLocationDetails={locationId => push({name: 'travelLocationDetail', locationId})}
+          />
+        );
     }
   })();
 

@@ -1,6 +1,6 @@
-import React, {useMemo, useState} from 'react';
-import {Image, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View} from 'react-native';
-import MapView, {PROVIDER_GOOGLE} from 'react-native-maps';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
+import {Image, Linking, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View} from 'react-native';
+import MapView, {Marker, PROVIDER_GOOGLE, type Region} from 'react-native-maps';
 import {AppHeader} from '../components/AppHeader';
 import {GradientButton} from '../components/GradientButton';
 import {ScreenFrame} from '../components/ScreenFrame';
@@ -11,6 +11,7 @@ import type {TravelCategory, TravelLocation} from '../types/app';
 type Props = {
   selectedLocationId?: string;
   onSelectLocation: (locationId: string) => void;
+  onOpenLocationDetails: (locationId: string) => void;
 };
 
 const categoryColors: Record<Exclude<TravelCategory, 'all'>, string> = {
@@ -29,10 +30,12 @@ const darkMapStyle = [
   {featureType: 'poi', elementType: 'geometry', stylers: [{color: '#101010'}]},
 ];
 
-export function MapScreen({selectedLocationId, onSelectLocation}: Props): React.JSX.Element {
+export function MapScreen({selectedLocationId, onSelectLocation, onOpenLocationDetails}: Props): React.JSX.Element {
+  const mapRef = useRef<MapView>(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [category, setCategory] = useState<TravelCategory>('all');
   const {width, height} = useWindowDimensions();
+  const compact = width <= 375 || height <= 720;
   const filteredLocations = useMemo(
     () => travelLocations.filter(location => category === 'all' || location.category === category),
     [category],
@@ -41,44 +44,131 @@ export function MapScreen({selectedLocationId, onSelectLocation}: Props): React.
   const selectedLocation = selectedLocationId
     ? travelLocations.find(location => location.id === selectedLocationId)
     : undefined;
+  const bottomPanelOffset = (compact ? layout.compactTabHeight : layout.tabHeight) + layout.navGap + 16;
+  const [region, setRegion] = useState<Region>(() => createRegion(selectedLocation ?? fallbackLocation, 6.5));
+
+  const animateToRegion = (nextRegion: Region, duration = 420) => {
+    setRegion(nextRegion);
+    mapRef.current?.animateToRegion(nextRegion, duration);
+  };
+
+  const focusLocation = (location: TravelLocation, delta = Math.min(Math.max(region.latitudeDelta, 1.8), 5.8)) => {
+    animateToRegion(createRegion(location, delta));
+  };
+
+  const fitVisibleLocations = () => {
+    if (filteredLocations.length === 0) {
+      return;
+    }
+
+    if (filteredLocations.length === 1) {
+      focusLocation(filteredLocations[0], 3.2);
+      return;
+    }
+
+    mapRef.current?.fitToCoordinates(
+      filteredLocations.map(location => location.coordinates),
+      {
+        animated: true,
+        edgePadding: {
+          top: layout.androidTopInset + 150,
+          right: 66,
+          bottom: bottomPanelOffset + 132,
+          left: 46,
+        },
+      },
+    );
+  };
+
+  const selectLocation = (location: TravelLocation) => {
+    onSelectLocation(location.id);
+    focusLocation(location, Math.min(Math.max(region.latitudeDelta, 1.8), 4.2));
+  };
+
+  const zoomMap = (scale: number) => {
+    const nextRegion = {
+      ...region,
+      latitudeDelta: clamp(region.latitudeDelta * scale, 0.04, 28),
+      longitudeDelta: clamp(region.longitudeDelta * scale, 0.04, 28),
+    };
+
+    animateToRegion(nextRegion, 260);
+  };
+
+  const centerMap = () => {
+    if (selectedLocation) {
+      focusLocation(selectedLocation, Math.min(Math.max(region.latitudeDelta, 1.8), 4.2));
+      return;
+    }
+
+    fitVisibleLocations();
+  };
+
+  useEffect(() => {
+    if (selectedLocation) {
+      focusLocation(selectedLocation, Math.min(Math.max(region.latitudeDelta, 1.8), 4.2));
+    }
+  }, [selectedLocationId]);
+
+  useEffect(() => {
+    if (selectedLocation && !filteredLocations.some(location => location.id === selectedLocation.id)) {
+      onSelectLocation('');
+    }
+
+    const timeout = setTimeout(fitVisibleLocations, 250);
+    return () => clearTimeout(timeout);
+  }, [category]);
 
   return (
     <View style={styles.root}>
       <ScreenFrame scroll={false} padded={false} contentStyle={styles.frame}>
         <MapView
+          ref={mapRef}
           style={StyleSheet.absoluteFill}
           provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
           customMapStyle={darkMapStyle}
-          initialRegion={{
-            latitude: (selectedLocation ?? fallbackLocation).coordinates.latitude,
-            longitude: (selectedLocation ?? fallbackLocation).coordinates.longitude,
-            latitudeDelta: 6.5,
-            longitudeDelta: 6.5,
-          }}
-        />
-        <View style={styles.mapShade} pointerEvents="none" />
-        <View style={styles.pinLayer} pointerEvents="box-none">
+          initialRegion={region}
+          onMapReady={fitVisibleLocations}
+          onRegionChangeComplete={setRegion}>
           {filteredLocations.map(location => (
-            <Pressable
+            <Marker
               key={location.id}
-              onPress={() => onSelectLocation(location.id)}
-              style={[
-                styles.markerOuter,
-                pinPosition(location, width, height),
-                {backgroundColor: `${categoryColors[location.category]}35`},
-              ]}>
-              <View style={[styles.markerInner, {backgroundColor: categoryColors[location.category]}]}>
-                <Text style={styles.markerIcon}>📍</Text>
+              coordinate={location.coordinates}
+              anchor={{x: 0.5, y: 0.5}}
+              zIndex={selectedLocationId === location.id ? 2 : 1}
+              onPress={() => selectLocation(location)}>
+              <View style={[styles.markerOuter, selectedLocationId === location.id && styles.markerOuterActive]}>
+                <View
+                  style={[
+                    styles.markerInner,
+                    selectedLocationId === location.id && styles.markerInnerActive,
+                    {backgroundColor: categoryColors[location.category]},
+                  ]}
+                />
               </View>
-            </Pressable>
+            </Marker>
           ))}
-        </View>
+        </MapView>
+        <View style={styles.mapShade} pointerEvents="none" />
         <View style={styles.headerWrap}>
-          <AppHeader title="Interactive Map" action={<View />} />
+          <AppHeader title="Map" action={<View />} />
         </View>
-        <Pressable onPress={() => setFilterOpen(true)} style={[styles.filterButton, shadow]}>
-          <Text style={styles.filterIcon}>▽</Text>
-        </Pressable>
+        {!filterOpen ? (
+          <Pressable onPress={() => setFilterOpen(true)} style={[styles.filterButton, shadow]}>
+            <Text style={styles.filterIcon}>☰</Text>
+          </Pressable>
+        ) : null}
+        {!filterOpen ? (
+          <View style={[styles.mapControls, shadow]}>
+            <MapControl label="+" onPress={() => zoomMap(0.55)} />
+            <View style={styles.controlDivider} />
+            <MapControl label="-" onPress={() => zoomMap(1.75)} />
+            <View style={styles.controlDivider} />
+            <MapControl label="⌖" onPress={centerMap} />
+            <View style={styles.controlDivider} />
+            <MapControl label="All" onPress={fitVisibleLocations} wide />
+          </View>
+        ) : null}
         {filterOpen ? (
           <View style={[styles.filterPanel, shadow]}>
             <View style={styles.filterTop}>
@@ -107,7 +197,7 @@ export function MapScreen({selectedLocationId, onSelectLocation}: Props): React.
           </View>
         ) : null}
         {selectedLocation ? (
-          <View style={[styles.detailCard, shadow]}>
+          <View style={[styles.detailCard, {bottom: bottomPanelOffset}, shadow]}>
             <Pressable onPress={() => onSelectLocation('')} style={styles.detailClose}>
               <Text style={styles.detailCloseText}>×</Text>
             </Pressable>
@@ -119,34 +209,68 @@ export function MapScreen({selectedLocationId, onSelectLocation}: Props): React.
                 {Math.abs(selectedLocation.coordinates.longitude).toFixed(4)}° W
               </Text>
               <Text style={styles.detailText}>{selectedLocation.shortDescription}</Text>
-              <GradientButton title="Get Directions" icon="✈️" onPress={() => {}} />
+              <View style={styles.detailActions}>
+                <Pressable onPress={() => onOpenLocationDetails(selectedLocation.id)} style={styles.detailInfoButton}>
+                  <Text style={styles.detailInfoText}>ℹ️ Details</Text>
+                </Pressable>
+                <GradientButton title="Directions" icon="✈️" onPress={() => openDirections(selectedLocation)} style={styles.detailMapButton} />
+              </View>
             </View>
           </View>
         ) : (
-          <Legend />
+          <Legend bottomOffset={bottomPanelOffset} />
         )}
       </ScreenFrame>
     </View>
   );
 }
 
-function pinPosition(location: TravelLocation, width: number, height: number) {
-  const minLat = 42.5;
-  const maxLat = 50;
-  const minLon = -94.6;
-  const maxLon = -77;
-  const xPercent = 0.1 + ((location.coordinates.longitude - minLon) / (maxLon - minLon)) * 0.78;
-  const yPercent = 0.18 + (1 - (location.coordinates.latitude - minLat) / (maxLat - minLat)) * 0.58;
-  const maxTop = height - layout.tabHeight - layout.navGap - 110;
+function createRegion(location: TravelLocation, delta: number): Region {
   return {
-    left: Math.max(18, Math.min(width - 74, width * xPercent)),
-    top: Math.max(layout.androidTopInset + 136, Math.min(maxTop, height * yPercent)),
+    latitude: location.coordinates.latitude,
+    longitude: location.coordinates.longitude,
+    latitudeDelta: delta,
+    longitudeDelta: delta,
   };
 }
 
-function Legend(): React.JSX.Element {
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function openDirections(location: TravelLocation) {
+  const latitude = location.coordinates.latitude;
+  const longitude = location.coordinates.longitude;
+  const label = encodeURIComponent(location.name);
+  const url =
+    Platform.OS === 'ios'
+      ? `http://maps.apple.com/?ll=${latitude},${longitude}&q=${label}`
+      : `geo:${latitude},${longitude}?q=${latitude},${longitude}(${label})`;
+
+  Linking.openURL(url).catch(() => undefined);
+}
+
+function MapControl({
+  label,
+  wide,
+  onPress,
+}: {
+  label: string;
+  wide?: boolean;
+  onPress: () => void;
+}): React.JSX.Element {
   return (
-    <View style={styles.legend}>
+    <Pressable onPress={onPress} style={({pressed}) => [styles.controlButton, wide && styles.controlButtonWide, pressed && styles.pressed]}>
+      <Text style={styles.controlText} numberOfLines={1} adjustsFontSizeToFit>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function Legend({bottomOffset}: {bottomOffset: number}): React.JSX.Element {
+  return (
+    <View style={[styles.legend, {bottom: bottomOffset}]}>
       <Text style={styles.legendTitle}>Tap any pin to view location details</Text>
       <View style={styles.legendRow}>
         {(['lakeside', 'nature', 'beach', 'waterfront'] as Exclude<TravelCategory, 'all'>[]).map(item => (
@@ -172,9 +296,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.16)',
   },
-  pinLayer: {
-    ...StyleSheet.absoluteFillObject,
-  },
   headerWrap: {
     position: 'absolute',
     left: 0,
@@ -194,9 +315,39 @@ const styles = StyleSheet.create({
   },
   filterIcon: {
     color: colors.white,
-    fontSize: 31,
-    lineHeight: 31,
-    transform: [{rotate: '180deg'}],
+    fontSize: 25,
+    lineHeight: 27,
+    fontWeight: '900',
+  },
+  mapControls: {
+    position: 'absolute',
+    top: layout.androidTopInset + 166,
+    right: 24,
+    width: 52,
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceHigh,
+    overflow: 'hidden',
+  },
+  controlButton: {
+    width: 52,
+    height: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  controlButtonWide: {
+    height: 42,
+  },
+  controlText: {
+    color: colors.text,
+    fontSize: 20,
+    lineHeight: 22,
+    fontWeight: '900',
+  },
+  controlDivider: {
+    height: 1,
+    backgroundColor: colors.border,
   },
   filterPanel: {
     position: 'absolute',
@@ -264,24 +415,24 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   markerOuter: {
-    position: 'absolute',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  markerInner: {
     width: 44,
     height: 44,
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
+  },
+  markerOuterActive: {
+    transform: [{scale: 1.12}],
+  },
+  markerInner: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 3,
     borderColor: 'rgba(255, 255, 255, 0.5)',
   },
-  markerIcon: {
-    fontSize: 20,
+  markerInnerActive: {
+    borderColor: colors.gold,
   },
   legend: {
     position: 'absolute',
@@ -374,5 +525,28 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     fontWeight: '700',
+  },
+  detailActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  detailInfoButton: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: layout.cardRadius,
+    backgroundColor: colors.surfaceSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailInfoText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  detailMapButton: {
+    flex: 1.08,
+  },
+  pressed: {
+    opacity: 0.78,
   },
 });

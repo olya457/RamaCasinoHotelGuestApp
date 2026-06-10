@@ -1,17 +1,59 @@
-import React from 'react';
-import {ActivityIndicator, ImageBackground, StyleSheet, Text, View} from 'react-native';
+import React, {useEffect, useRef} from 'react';
+import {Animated, ImageBackground, StyleSheet, Text, View} from 'react-native';
 import {imageAssets} from '../data/assets';
-import {colors, layout} from '../theme/theme';
+import {colors} from '../theme/theme';
 
 export function SplashScreen(): React.JSX.Element {
+  const logoScale = useRef(new Animated.Value(0.92)).current;
+  const logoOpacity = useRef(new Animated.Value(0.72)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(logoScale, {
+            toValue: 1.06,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(logoScale, {
+            toValue: 0.92,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.sequence([
+          Animated.timing(logoOpacity, {
+            toValue: 1,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(logoOpacity, {
+            toValue: 0.72,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]),
+    );
+
+    animation.start();
+
+    return () => animation.stop();
+  }, [logoOpacity, logoScale]);
+
   return (
     <ImageBackground source={imageAssets.splashHotel} resizeMode="cover" style={styles.root}>
-      <View style={styles.overlay} />
-      <View style={styles.portal}>
-        <Text style={styles.mark}>🎰</Text>
-        <Text style={styles.title}>Rama Casino Hotel</Text>
-        <Text style={styles.subtitle}>Guest Experience</Text>
-        <ActivityIndicator color={colors.yellow} style={styles.loader} />
+      <View style={styles.content}>
+        <Animated.Image
+          source={imageAssets.logo}
+          resizeMode="contain"
+          style={[styles.logo, {opacity: logoOpacity, transform: [{scale: logoScale}]}]}
+        />
+        <Animated.View style={[styles.textWrap, {opacity: logoOpacity}]}>
+          <Text style={styles.taglineMain}>Luxury Resort Stay</Text>
+          <Text style={styles.taglineAccent}>Guest Companion</Text>
+        </Animated.View>
       </View>
     </ImageBackground>
   );
@@ -24,38 +66,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.black,
   },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.44)',
-  },
-  portal: {
-    width: 220,
-    minHeight: 190,
-    borderRadius: layout.cardRadius,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.14)',
-    backgroundColor: 'rgba(10, 10, 10, 0.74)',
+  content: {
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+    gap: 18,
   },
-  mark: {
-    fontSize: 42,
-    marginBottom: 14,
+  logo: {
+    width: 218,
+    height: 218,
+    borderRadius: 50,
   },
-  title: {
+  textWrap: {
+    minWidth: 286,
+    borderRadius: 24,
+    backgroundColor: 'rgba(0, 0, 0, 0.46)',
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+    alignItems: 'center',
+    gap: 3,
+  },
+  taglineMain: {
     color: colors.text,
-    fontSize: 20,
+    fontSize: 25,
+    lineHeight: 30,
     fontWeight: '900',
     textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.72)',
+    textShadowOffset: {width: 0, height: 2},
+    textShadowRadius: 8,
   },
-  subtitle: {
+  taglineAccent: {
     color: colors.gold,
-    fontSize: 12,
-    fontWeight: '800',
-    marginTop: 6,
-  },
-  loader: {
-    marginTop: 18,
+    fontSize: 21,
+    lineHeight: 26,
+    fontWeight: '900',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.72)',
+    textShadowOffset: {width: 0, height: 2},
+    textShadowRadius: 8,
   },
 });

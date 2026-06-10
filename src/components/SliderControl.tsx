@@ -13,7 +13,11 @@ type Props = {
 
 export function SliderControl({value, min, max, onChange, leftLabel, rightLabel}: Props): React.JSX.Element {
   const [width, setWidth] = useState(1);
-  const percent = ((value - min) / (max - min)) * 100;
+  const thumbSize = 20;
+  const ratio = Math.max(0, Math.min(1, (value - min) / (max - min)));
+  const availableWidth = Math.max(width - thumbSize, 0);
+  const thumbLeft = ratio * availableWidth;
+  const fillWidth = Math.min(width, thumbLeft + thumbSize / 2);
 
   const updateFromEvent = (event: GestureResponderEvent) => {
     const nextPercent = Math.max(0, Math.min(1, event.nativeEvent.locationX / width));
@@ -29,8 +33,8 @@ export function SliderControl({value, min, max, onChange, leftLabel, rightLabel}
         onMoveShouldSetResponder={() => true}
         onResponderGrant={updateFromEvent}
         onResponderMove={updateFromEvent}>
-        <View style={[styles.fill, {width: `${percent}%`}]} />
-        <View style={[styles.thumb, {left: `${percent}%`}]} />
+        <View style={[styles.fill, {width: fillWidth}]} />
+        <View style={[styles.thumb, {left: thumbLeft}]} />
       </View>
       <View style={styles.labels}>
         <Text style={styles.label}>{leftLabel ?? String(min)}</Text>
@@ -62,7 +66,6 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    marginLeft: -10,
     backgroundColor: colors.orange,
     borderWidth: 2,
     borderColor: colors.yellow,

@@ -1,28 +1,23 @@
 import React, {useMemo, useState} from 'react';
-import {Image, Pressable, ScrollView, Share, StyleSheet, Text, View} from 'react-native';
+import {Image, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {AppHeader} from '../components/AppHeader';
 import {GradientButton} from '../components/GradientButton';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {travelCategories, travelLocations} from '../data/travel';
 import {colors, layout} from '../theme/theme';
-import type {TravelCategory, TravelLocation} from '../types/app';
+import type {TravelCategory} from '../types/app';
 
 type Props = {
   onViewOnMap: (locationId: string) => void;
+  onOpenDetails: (locationId: string) => void;
 };
 
-export function TravelScreen({onViewOnMap}: Props): React.JSX.Element {
+export function TravelScreen({onViewOnMap, onOpenDetails}: Props): React.JSX.Element {
   const [category, setCategory] = useState<TravelCategory>('all');
   const locations = useMemo(
     () => travelLocations.filter(location => category === 'all' || location.category === category),
     [category],
   );
-
-  const shareLocation = (location: TravelLocation) => {
-    Share.share({
-      message: `${location.name}: ${location.shortDescription}`,
-    });
-  };
 
   return (
     <View style={styles.root}>
@@ -48,8 +43,8 @@ export function TravelScreen({onViewOnMap}: Props): React.JSX.Element {
             <View key={location.id} style={styles.card}>
               <View style={styles.imageWrap}>
                 <Image source={location.image} style={styles.image} />
-                <Pressable onPress={() => shareLocation(location)} style={styles.shareFloating}>
-                  <Text style={styles.shareFloatingIcon}>🔗</Text>
+                <Pressable onPress={() => onOpenDetails(location.id)} style={styles.detailFloating}>
+                  <Text style={styles.detailFloatingIcon}>ℹ️</Text>
                 </Pressable>
               </View>
               <View style={styles.cardBody}>
@@ -59,8 +54,10 @@ export function TravelScreen({onViewOnMap}: Props): React.JSX.Element {
                 </Text>
                 <Text style={styles.description}>{location.shortDescription}</Text>
                 <View style={styles.actions}>
-                  <Pressable onPress={() => shareLocation(location)} style={styles.shareButton}>
-                    <Text style={styles.shareText}>🔗 Share</Text>
+                  <Pressable onPress={() => onOpenDetails(location.id)} style={styles.detailsButton}>
+                    <Text style={styles.detailsText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
+                      ℹ️ Open Details
+                    </Text>
                   </Pressable>
                   <GradientButton title="View on Map" icon="✈️" onPress={() => onViewOnMap(location.id)} style={styles.mapButton} />
                 </View>
@@ -135,7 +132,7 @@ const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'cover',
   },
-  shareFloating: {
+  detailFloating: {
     position: 'absolute',
     right: 16,
     top: 16,
@@ -146,7 +143,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  shareFloatingIcon: {
+  detailFloatingIcon: {
     fontSize: 19,
   },
   cardBody: {
@@ -173,7 +170,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
-  shareButton: {
+  detailsButton: {
     flex: 1,
     minHeight: 48,
     borderRadius: 8,
@@ -181,7 +178,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  shareText: {
+  detailsText: {
     color: colors.text,
     fontSize: 14,
     fontWeight: '900',

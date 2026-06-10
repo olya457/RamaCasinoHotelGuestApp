@@ -8,7 +8,9 @@ export type AppRoute =
   | {name: 'orderSummary'}
   | {name: 'orderConfirmed'}
   | {name: 'requestForm'; categoryId: RequestCategoryId}
-  | {name: 'trackRequests'};
+  | {name: 'trackRequests'}
+  | {name: 'amenityDetail'; amenityId: string}
+  | {name: 'travelLocationDetail'; locationId: string};
 
 export type MenuCategoryId = 'breakfast' | 'allday' | 'latenight';
 
@@ -32,6 +34,13 @@ export type MenuCategory = {
 
 export type CartState = Record<string, number>;
 
+export type GuestProfile = {
+  name: string;
+  room: string;
+  stayDate?: string;
+  notes?: string;
+};
+
 export type RequestCategoryId =
   | 'bedding'
   | 'bathroom'
@@ -51,6 +60,7 @@ export type GuestRequest = {
   status: RequestStatus;
   createdAtLabel: string;
   progress?: number;
+  isUserCreated?: boolean;
 };
 
 export type RequestCategory = {
@@ -83,6 +93,11 @@ export type TravelLocation = {
   };
   description: string;
   shortDescription: string;
+  detailDescription: string;
+  setting: string;
+  highlights: string[];
+  bestFor: string[];
+  visitTips: string[];
   image: ImageSourcePropType;
 };
 
@@ -92,4 +107,14 @@ export type Amenity = {
   description: string;
   icon: string;
   image: ImageSourcePropType;
+  category: 'Wellness' | 'Dining';
+  hours: string;
+  location: string;
+  priceInfo: string;
+  booking: string;
+  details: string;
+  highlights: string[];
+  goodToKnow: string[];
+  accessibility: string;
+  contact: string;
 };

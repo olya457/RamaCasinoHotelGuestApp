@@ -2,6 +2,12 @@ import React from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import {GradientButton} from '../components/GradientButton';
 import {ScreenFrame} from '../components/ScreenFrame';
+import {
+  formatGuestNotesLabel,
+  formatRoomLabel,
+  formatStayDateLabel,
+  useGuestProfile,
+} from '../context/GuestProfileContext';
 import {colors, layout} from '../theme/theme';
 
 type Props = {
@@ -9,6 +15,8 @@ type Props = {
 };
 
 export function OrderConfirmedScreen({onBack}: Props): React.JSX.Element {
+  const {profile} = useGuestProfile();
+
   return (
     <ScreenFrame scroll={false}>
       <View style={styles.center}>
@@ -17,8 +25,10 @@ export function OrderConfirmedScreen({onBack}: Props): React.JSX.Element {
         </View>
         <Text style={styles.title}>Order Confirmed!</Text>
         <View style={styles.card}>
-          <Row label="Guest Name" value="Demo Guest" />
-          <Row label="Room Number" value="2024" gold />
+          <Row label="Guest Name" value={profile.name} />
+          <Row label="Room Number" value={formatRoomLabel(profile.room)} gold />
+          <Row label="Arrival Date" value={formatStayDateLabel(profile.stayDate)} />
+          <Row label="Guest Notes" value={formatGuestNotesLabel(profile.notes)} />
           <Row label="Estimated Delivery" value="⏱ 35-40 minutes" />
           <View style={styles.divider} />
           <Row label="Total Amount" value="Room charge" gold large />

@@ -1,8 +1,14 @@
 import React, {useMemo, useState} from 'react';
-import {StyleSheet, Text, TextInput, View} from 'react-native';
+import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {AppHeader} from '../components/AppHeader';
 import {GradientButton} from '../components/GradientButton';
 import {ScreenFrame} from '../components/ScreenFrame';
+import {
+  formatGuestNotesLabel,
+  formatRoomLabel,
+  formatStayDateLabel,
+  useGuestProfile,
+} from '../context/GuestProfileContext';
 import {getMenuItem} from '../data/menu';
 import {colors, layout} from '../theme/theme';
 import type {CartState} from '../types/app';
@@ -14,8 +20,18 @@ type Props = {
   onConfirmed: () => void;
 };
 
+const instructionKeys = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
+const instructionOptions = [
+  {emoji: '🌿', value: 'No allergens'},
+  {emoji: '🚪', value: 'Leave at door'},
+  {emoji: '🍽️', value: 'Extra cutlery'},
+  {emoji: '🤫', value: 'Call quietly'},
+];
+
 export function OrderSummaryScreen({cart, setCart, onBack, onConfirmed}: Props): React.JSX.Element {
+  const {profile} = useGuestProfile();
   const [instructions, setInstructions] = useState('');
+  const [instructionsKeyboardOpen, setInstructionsKeyboardOpen] = useState(false);
   const entries = useMemo(
     () =>
       Object.entries(cart)
@@ -35,6 +51,30 @@ export function OrderSummaryScreen({cart, setCart, onBack, onConfirmed}: Props):
     setCart({});
     setInstructions('');
     onConfirmed();
+  };
+
+  const addInstructionCharacter = (character: string) => {
+    setInstructions(current => `${current}${character}`.slice(0, 80));
+  };
+
+  const removeInstructionCharacter = () => {
+    setInstructions(current => current.slice(0, -1));
+  };
+
+  const selectInstruction = (value: string) => {
+    setInstructions(current => {
+      const trimmed = current.trim();
+
+      if (!trimmed) {
+        return value;
+      }
+
+      if (trimmed.includes(value)) {
+        return trimmed;
+      }
+
+      return `${trimmed}, ${value}`.slice(0, 80);
+    });
   };
 
   return (
@@ -61,14 +101,63 @@ export function OrderSummaryScreen({cart, setCart, onBack, onConfirmed}: Props):
         </View>
         <View style={styles.inputCard}>
           <Text style={styles.label}>Special Instructions (Optional)</Text>
-          <TextInput
-            value={instructions}
-            onChangeText={setInstructions}
-            placeholder="Any special requests? Allergies? Preferences?"
-            placeholderTextColor={colors.dim}
-            multiline
-            style={styles.input}
-          />
+          <Pressable
+            onPress={() => setInstructionsKeyboardOpen(current => !current)}
+            style={[styles.input, instructionsKeyboardOpen && styles.inputActive]}>
+            <Text style={[styles.inputText, !instructions.trim() && styles.placeholder]} numberOfLines={3}>
+              {instructions.trim() || 'Any special requests? Allergies? Preferences?'}
+            </Text>
+            <Text style={styles.inputIcon}>⌨️</Text>
+          </Pressable>
+          {instructionsKeyboardOpen ? (
+            <View style={styles.customKeyboard}>
+              <View style={styles.quickGrid}>
+                {instructionOptions.map(option => (
+                  <Pressable
+                    key={option.value}
+                    onPress={() => selectInstruction(option.value)}
+                    style={({pressed}) => [
+                      styles.quickButton,
+                      instructions.includes(option.value) && styles.quickButtonActive,
+                      pressed && styles.pressed,
+                    ]}>
+                    <Text style={styles.quickEmoji}>{option.emoji}</Text>
+                    <Text
+                      style={[styles.quickText, instructions.includes(option.value) && styles.quickTextActive]}
+                      numberOfLines={1}>
+                      {option.value}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              {instructionKeys.map(row => (
+                <View key={row} style={styles.keyRow}>
+                  {row.split('').map(key => (
+                    <Pressable
+                      key={key}
+                      onPress={() => addInstructionCharacter(key)}
+                      style={({pressed}) => [styles.key, pressed && styles.pressed]}>
+                      <Text style={styles.keyText}>{key}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              ))}
+              <View style={styles.keyRow}>
+                <Pressable onPress={() => addInstructionCharacter(' ')} style={({pressed}) => [styles.spaceKey, pressed && styles.pressed]}>
+                  <Text style={styles.keyText}>space</Text>
+                </Pressable>
+                <Pressable onPress={removeInstructionCharacter} style={({pressed}) => [styles.actionKey, pressed && styles.pressed]}>
+                  <Text style={styles.keyText}>⌫</Text>
+                </Pressable>
+                <Pressable onPress={() => setInstructions('')} style={({pressed}) => [styles.actionKey, pressed && styles.pressed]}>
+                  <Text style={styles.keyText}>clear</Text>
+                </Pressable>
+                <Pressable onPress={() => setInstructionsKeyboardOpen(false)} style={({pressed}) => [styles.actionKey, pressed && styles.pressed]}>
+                  <Text style={styles.keyText}>✓</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : null}
         </View>
         <View style={styles.totalCard}>
           <Row label="Subtotal" value={`$${subtotal.toFixed(2)}`} />
@@ -81,7 +170,8 @@ export function OrderSummaryScreen({cart, setCart, onBack, onConfirmed}: Props):
           <Text style={styles.timeIcon}>⏱</Text>
           <View>
             <Text style={styles.timeTitle}>Estimated Delivery Time</Text>
-            <Text style={styles.timeBody}>35-40 minutes to Room 2024</Text>
+            <Text style={styles.timeBody}>{`${profile.room ? formatRoomLabel(profile.room) : 'Your room'} · ${formatStayDateLabel(profile.stayDate)}`}</Text>
+            <Text style={styles.timeBody}>{formatGuestNotesLabel(profile.notes)}</Text>
           </View>
         </View>
         <GradientButton
@@ -161,10 +251,107 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: '#1e1e1e',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 12,
+  },
+  inputActive: {
+    borderColor: colors.orange,
+    backgroundColor: 'rgba(255, 139, 31, 0.1)',
+  },
+  inputText: {
     color: colors.text,
     fontSize: 14,
-    padding: 12,
-    textAlignVertical: 'top',
+    lineHeight: 20,
+    fontWeight: '700',
+    flex: 1,
+  },
+  placeholder: {
+    color: colors.dim,
+  },
+  inputIcon: {
+    fontSize: 16,
+  },
+  customKeyboard: {
+    borderRadius: 14,
+    backgroundColor: '#101010',
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 8,
+    gap: 7,
+  },
+  quickGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 2,
+  },
+  quickButton: {
+    width: '48.5%',
+    minHeight: 36,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 8,
+  },
+  quickButtonActive: {
+    borderColor: colors.orange,
+    backgroundColor: 'rgba(255, 139, 31, 0.16)',
+  },
+  quickEmoji: {
+    fontSize: 14,
+  },
+  quickText: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: '900',
+    flexShrink: 1,
+  },
+  quickTextActive: {
+    color: colors.gold,
+  },
+  keyRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  key: {
+    width: 24,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: colors.surfaceSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  spaceKey: {
+    flex: 1,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: colors.surfaceSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionKey: {
+    width: 52,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: colors.surfaceSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  keyText: {
+    color: colors.text,
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  pressed: {
+    opacity: 0.78,
   },
   totalCard: {
     marginTop: 14,

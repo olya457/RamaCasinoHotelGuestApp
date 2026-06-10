@@ -1,9 +1,15 @@
 import React, {useMemo, useState} from 'react';
-import {StyleSheet, Text, TextInput, View} from 'react-native';
+import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {AppHeader} from '../components/AppHeader';
 import {GradientButton} from '../components/GradientButton';
 import {GradientSurface} from '../components/GradientSurface';
 import {ScreenFrame} from '../components/ScreenFrame';
+import {
+  formatGuestNotesLabel,
+  formatRoomLabel,
+  formatStayDateLabel,
+  useGuestProfile,
+} from '../context/GuestProfileContext';
 import {requestCategories} from '../data/requests';
 import {colors, layout} from '../theme/theme';
 import type {GuestRequest, RequestCategoryId} from '../types/app';
@@ -15,8 +21,12 @@ type Props = {
   onSubmitted: () => void;
 };
 
+const descriptionKeys = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
+
 export function RequestFormScreen({categoryId, setRequests, onBack, onSubmitted}: Props): React.JSX.Element {
+  const {profile} = useGuestProfile();
   const [description, setDescription] = useState('');
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
   const category = useMemo(
     () => requestCategories.find(item => item.id === categoryId) ?? requestCategories[0],
     [categoryId],
@@ -34,10 +44,32 @@ export function RequestFormScreen({categoryId, setRequests, onBack, onSubmitted}
       description: description.trim(),
       status: 'submitted',
       createdAtLabel: 'Just now',
+      isUserCreated: true,
     };
     setRequests(current => [nextRequest, ...current]);
     setDescription('');
+    setKeyboardOpen(false);
     onSubmitted();
+  };
+
+  const addDescriptionCharacter = (character: string) => {
+    setDescription(current => `${current}${character}`.slice(0, 120));
+  };
+
+  const removeDescriptionCharacter = () => {
+    setDescription(current => current.slice(0, -1));
+  };
+
+  const selectExample = (value: string) => {
+    setDescription(current => {
+      const trimmed = current.trim();
+
+      if (!trimmed || trimmed === value) {
+        return value;
+      }
+
+      return `${trimmed}, ${value}`.slice(0, 120);
+    });
   };
 
   return (
@@ -53,14 +85,59 @@ export function RequestFormScreen({categoryId, setRequests, onBack, onSubmitted}
           </View>
         </GradientSurface>
         <Text style={styles.label}>Request Description *</Text>
-        <TextInput
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Please describe your request in detail..."
-          placeholderTextColor={colors.dim}
-          multiline
-          style={[styles.input, canSubmit && styles.inputActive]}
-        />
+        <Pressable onPress={() => setKeyboardOpen(current => !current)} style={[styles.input, keyboardOpen && styles.inputActive]}>
+          <Text style={[styles.inputText, !description.trim() && styles.placeholder]} numberOfLines={5}>
+            {description.trim() || 'Please describe your request in detail...'}
+          </Text>
+          <Text style={styles.inputIcon}>⌨️</Text>
+        </Pressable>
+        {keyboardOpen ? (
+          <View style={styles.customKeyboard}>
+            <View style={styles.quickGrid}>
+              {category.examples.map(example => (
+                <Pressable
+                  key={example}
+                  onPress={() => selectExample(example)}
+                  style={({pressed}) => [
+                    styles.quickButton,
+                    description.includes(example) && styles.quickButtonActive,
+                    pressed && styles.pressed,
+                  ]}>
+                  <Text style={styles.quickEmoji}>{category.icon}</Text>
+                  <Text style={[styles.quickText, description.includes(example) && styles.quickTextActive]} numberOfLines={1}>
+                    {example}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            {descriptionKeys.map(rowKey => (
+              <View key={rowKey} style={styles.keyRow}>
+                {rowKey.split('').map(key => (
+                  <Pressable
+                    key={key}
+                    onPress={() => addDescriptionCharacter(key)}
+                    style={({pressed}) => [styles.key, pressed && styles.pressed]}>
+                    <Text style={styles.keyText}>{key}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ))}
+            <View style={styles.keyRow}>
+              <Pressable onPress={() => addDescriptionCharacter(' ')} style={({pressed}) => [styles.spaceKey, pressed && styles.pressed]}>
+                <Text style={styles.keyText}>space</Text>
+              </Pressable>
+              <Pressable onPress={removeDescriptionCharacter} style={({pressed}) => [styles.actionKey, pressed && styles.pressed]}>
+                <Text style={styles.keyText}>⌫</Text>
+              </Pressable>
+              <Pressable onPress={() => setDescription('')} style={({pressed}) => [styles.actionKey, pressed && styles.pressed]}>
+                <Text style={styles.keyText}>clear</Text>
+              </Pressable>
+              <Pressable onPress={() => setKeyboardOpen(false)} style={({pressed}) => [styles.actionKey, pressed && styles.pressed]}>
+                <Text style={styles.keyText}>✓</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
         <View style={styles.exampleCard}>
           <Text style={styles.exampleTitle}>Example requests:</Text>
           {category.examples.map(example => (
@@ -70,8 +147,10 @@ export function RequestFormScreen({categoryId, setRequests, onBack, onSubmitted}
           ))}
         </View>
         <View style={styles.guestCard}>
-          <Row label="Your Room" value="2024" gold />
-          <Row label="Guest Name" value="Demo Guest" />
+          <Row label="Your Room" value={formatRoomLabel(profile.room)} gold />
+          <Row label="Arrival Date" value={formatStayDateLabel(profile.stayDate)} />
+          <Row label="Guest Notes" value={formatGuestNotesLabel(profile.notes)} />
+          <Row label="Guest Name" value={profile.name} />
         </View>
         <GradientButton title="Submit Request" icon="✈️" disabled={!canSubmit} onPress={submit} />
       </ScreenFrame>
@@ -127,14 +206,107 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: '#101010',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 14,
+  },
+  inputText: {
     color: colors.text,
     fontSize: 16,
     lineHeight: 22,
-    padding: 14,
-    textAlignVertical: 'top',
+    fontWeight: '700',
+    flex: 1,
   },
   inputActive: {
     borderColor: 'rgba(239, 48, 40, 0.5)',
+  },
+  placeholder: {
+    color: colors.dim,
+  },
+  inputIcon: {
+    fontSize: 16,
+  },
+  customKeyboard: {
+    marginTop: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#101010',
+    padding: 8,
+    gap: 7,
+  },
+  quickGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 2,
+  },
+  quickButton: {
+    width: '100%',
+    minHeight: 38,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceSoft,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 10,
+  },
+  quickButtonActive: {
+    borderColor: colors.orange,
+    backgroundColor: 'rgba(255, 139, 31, 0.16)',
+  },
+  quickEmoji: {
+    fontSize: 14,
+  },
+  quickText: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: '900',
+    flexShrink: 1,
+  },
+  quickTextActive: {
+    color: colors.gold,
+  },
+  keyRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  key: {
+    width: 24,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: colors.surfaceSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  spaceKey: {
+    flex: 1,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: colors.surfaceSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionKey: {
+    width: 52,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: colors.surfaceSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  keyText: {
+    color: colors.text,
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  pressed: {
+    opacity: 0.78,
   },
   exampleCard: {
     marginTop: 16,

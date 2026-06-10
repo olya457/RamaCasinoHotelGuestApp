@@ -25,9 +25,12 @@ export const colors = {
 
 export const layout = {
   screenPadding: 20,
+  compactScreenPadding: 16,
   cardRadius: 8,
   tabHeight: 72,
+  compactTabHeight: 66,
   navGap: Platform.OS === 'android' ? 30 : 20,
+  topInset: Platform.OS === 'android' ? 30 : 44,
   androidTopInset: Platform.OS === 'android' ? 30 : 0,
   bottomInset: Platform.OS === 'android' ? 30 : 20,
 };

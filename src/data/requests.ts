@@ -7,7 +7,7 @@ export const requestCategories: RequestCategory[] = [
     title: 'Bedding & Linens',
     icon: '🛏️',
     color: colors.red,
-    examples: ['Extra pillows for Room 2024', 'Additional blanket please', 'Hypoallergenic bedding needed'],
+    examples: ['Extra pillows for my room', 'Additional blanket please', 'Hypoallergenic bedding needed'],
   },
   {
     id: 'bathroom',
@@ -58,7 +58,7 @@ export const defaultRequests: GuestRequest[] = [
     id: 'default-bedding',
     categoryId: 'bedding',
     title: 'Bedding & Linens',
-    description: 'Extra pillows needed for Room 2024',
+    description: 'Extra pillows needed for my room',
     status: 'completed',
     createdAtLabel: '2 hours ago',
   },

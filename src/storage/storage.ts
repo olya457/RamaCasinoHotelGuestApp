@@ -5,6 +5,7 @@ export const storageKeys = {
   cart: 'ramaCasinoHotel.cart',
   requests: 'ramaCasinoHotel.requests',
   climate: 'ramaCasinoHotel.climate',
+  guestProfile: 'ramaCasinoHotel.guestProfile',
 };
 
 export async function loadJSON<T>(key: string, fallback: T): Promise<T> {

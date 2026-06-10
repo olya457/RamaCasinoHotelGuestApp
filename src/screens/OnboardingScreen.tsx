@@ -19,7 +19,7 @@ type Props = {
 const slides = [
   {
     title: 'Welcome to Rama Casino Hotel',
-    body: 'Experience luxury and entertainment at your fingertips. This demo app showcases the complete guest journey.',
+    body: 'Experience luxury and entertainment at your fingertips with a complete guest journey in one place.',
     image: imageAssets.onboardingExterior,
   },
   {
@@ -38,8 +38,8 @@ const slides = [
     image: imageAssets.onboardingNight,
   },
   {
-    title: 'Demo Application Notice',
-    body: 'This is a demonstration app created to showcase functionality and user experience. Not for actual guest use.',
+    title: 'Your Stay, Simplified',
+    body: 'Manage room service, comfort settings, wellness, dining, and local travel from a single guest companion.',
     image: imageAssets.onboardingPool,
   },
 ];

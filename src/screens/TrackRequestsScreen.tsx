@@ -1,5 +1,5 @@
 import React from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {AppHeader} from '../components/AppHeader';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {defaultRequests} from '../data/requests';
@@ -8,6 +8,7 @@ import type {GuestRequest, RequestStatus} from '../types/app';
 
 type Props = {
   requests: GuestRequest[];
+  setRequests: React.Dispatch<React.SetStateAction<GuestRequest[]>>;
   onBack: () => void;
 };
 
@@ -18,8 +19,11 @@ const statusMeta: Record<RequestStatus, {label: string; color: string; icon: str
   completed: {label: 'Completed', color: colors.green, icon: '☑️'},
 };
 
-export function TrackRequestsScreen({requests, onBack}: Props): React.JSX.Element {
+export function TrackRequestsScreen({requests, setRequests, onBack}: Props): React.JSX.Element {
   const allRequests = [...requests, ...defaultRequests];
+  const deleteRequest = (requestId: string) => {
+    setRequests(current => current.filter(request => request.id !== requestId));
+  };
 
   return (
     <View style={styles.root}>
@@ -41,6 +45,8 @@ export function TrackRequestsScreen({requests, onBack}: Props): React.JSX.Elemen
         <View style={styles.list}>
           {allRequests.map(request => {
             const meta = statusMeta[request.status];
+            const canDelete = request.isUserCreated || request.id.startsWith('guest-request-');
+
             return (
               <View key={request.id} style={styles.card}>
                 <View style={[styles.statusIcon, {backgroundColor: `${meta.color}30`}]}>
@@ -49,8 +55,17 @@ export function TrackRequestsScreen({requests, onBack}: Props): React.JSX.Elemen
                 <View style={styles.cardBody}>
                   <View style={styles.cardTop}>
                     <Text style={styles.cardTitle}>{request.title}</Text>
-                    <View style={[styles.statusPill, {backgroundColor: `${meta.color}30`}]}>
-                      <Text style={[styles.statusPillText, {color: meta.color}]}>{meta.label}</Text>
+                    <View style={styles.cardActions}>
+                      <View style={[styles.statusPill, {backgroundColor: `${meta.color}30`}]}>
+                        <Text style={[styles.statusPillText, {color: meta.color}]}>{meta.label}</Text>
+                      </View>
+                      {canDelete ? (
+                        <Pressable
+                          onPress={() => deleteRequest(request.id)}
+                          style={({pressed}) => [styles.deleteIconButton, pressed && styles.pressed]}>
+                          <Text style={styles.deleteIcon}>🗑️</Text>
+                        </Pressable>
+                      ) : null}
                     </View>
                   </View>
                   <Text style={styles.description}>{request.description}</Text>
@@ -59,6 +74,14 @@ export function TrackRequestsScreen({requests, onBack}: Props): React.JSX.Elemen
                     <View style={styles.progressTrack}>
                       <View style={[styles.progressFill, {width: `${request.progress * 100}%`}]} />
                     </View>
+                  ) : null}
+                  {canDelete ? (
+                    <Pressable
+                      onPress={() => deleteRequest(request.id)}
+                      style={({pressed}) => [styles.deleteButton, pressed && styles.pressed]}>
+                      <Text style={styles.deleteIcon}>🗑️</Text>
+                      <Text style={styles.deleteText}>Delete Request</Text>
+                    </Pressable>
                   ) : null}
                 </View>
               </View>
@@ -165,6 +188,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
   },
+  cardActions: {
+    alignItems: 'flex-end',
+    gap: 7,
+  },
+  deleteIconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 48, 40, 0.45)',
+    backgroundColor: 'rgba(239, 48, 40, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   description: {
     color: colors.muted,
     fontSize: 14,
@@ -186,5 +223,29 @@ const styles = StyleSheet.create({
   progressFill: {
     height: 4,
     backgroundColor: colors.yellow,
+  },
+  deleteButton: {
+    alignSelf: 'flex-start',
+    minHeight: 34,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 48, 40, 0.45)',
+    backgroundColor: 'rgba(239, 48, 40, 0.12)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingHorizontal: 12,
+    marginTop: 2,
+  },
+  deleteIcon: {
+    fontSize: 13,
+  },
+  deleteText: {
+    color: colors.red,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  pressed: {
+    opacity: 0.76,
   },
 });

@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleProp,
   StyleSheet,
+  useWindowDimensions,
   View,
   ViewStyle,
 } from 'react-native';
@@ -25,8 +26,12 @@ export function ScreenFrame({
   padded = true,
   contentStyle,
 }: Props): React.JSX.Element {
-  const paddingBottom = withTabs ? layout.tabHeight + layout.navGap + 20 : layout.bottomInset;
-  const horizontalPadding = padded ? layout.screenPadding : 0;
+  const {height, width} = useWindowDimensions();
+  const compact = width <= 375 || height <= 720;
+  const paddingBottom = withTabs
+    ? (compact ? layout.compactTabHeight : layout.tabHeight) + layout.navGap + (compact ? 14 : 20)
+    : layout.bottomInset;
+  const horizontalPadding = padded ? (compact ? layout.compactScreenPadding : layout.screenPadding) : 0;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -38,6 +43,7 @@ export function ScreenFrame({
               showsVerticalScrollIndicator={false}
               contentContainerStyle={[
                 styles.scrollContent,
+                compact && styles.scrollContentCompact,
                 {paddingBottom, paddingHorizontal: horizontalPadding},
                 contentStyle,
               ]}>
@@ -69,6 +75,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingTop: 20,
+  },
+  scrollContentCompact: {
+    paddingTop: 14,
   },
   body: {
     flex: 1,
