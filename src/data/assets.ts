@@ -3,6 +3,7 @@ import type {ImageSourcePropType} from 'react-native';
 export const imageAssets: Record<string, ImageSourcePropType> = {
   splashHotel: require('../assets/splash-hotel.png'),
   logo: require('../assets/logo.png'),
+  logo2: require('../assets/logo2.png'),
   onboardingExterior: require('../assets/onboarding-exterior.png'),
   onboardingLobby: require('../assets/onboarding-lobby.png'),
   onboardingSuite: require('../assets/onboarding-suite.png'),
