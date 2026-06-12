@@ -1,21 +1,44 @@
 import React from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {GradientButton} from '../components/GradientButton';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {
-  formatGuestNotesLabel,
   formatRoomLabel,
   formatStayDateLabel,
-  useGuestProfile,
+  formatStayTimeLabel,
 } from '../context/GuestProfileContext';
 import {colors, layout} from '../theme/theme';
+import type {RoomServiceOrder} from '../types/app';
 
 type Props = {
+  order?: RoomServiceOrder;
   onBack: () => void;
+  onTrack: () => void;
 };
 
-export function OrderConfirmedScreen({onBack}: Props): React.JSX.Element {
-  const {profile} = useGuestProfile();
+export function OrderConfirmedScreen({
+  order,
+  onBack,
+  onTrack,
+}: Props): React.JSX.Element {
+  if (!order) {
+    return (
+      <ScreenFrame scroll={false}>
+        <View style={styles.center}>
+          <Text style={styles.title}>Order unavailable</Text>
+          <Text style={styles.body}>
+            The order confirmation could not be opened. Your recent orders
+            remain available from tracking.
+          </Text>
+          <GradientButton
+            title="Track Orders"
+            onPress={onTrack}
+            style={styles.button}
+          />
+        </View>
+      </ScreenFrame>
+    );
+  }
 
   return (
     <ScreenFrame scroll={false}>
@@ -23,28 +46,72 @@ export function OrderConfirmedScreen({onBack}: Props): React.JSX.Element {
         <View style={styles.check}>
           <Text style={styles.checkText}>✓</Text>
         </View>
-        <Text style={styles.title}>Order Confirmed!</Text>
+        <Text style={styles.title}>Order Sent</Text>
+        <Text style={styles.reference}>{order.confirmationCode}</Text>
         <View style={styles.card}>
-          <Row label="Guest Name" value={profile.name} />
-          <Row label="Room Number" value={formatRoomLabel(profile.room)} gold />
-          <Row label="Arrival Date" value={formatStayDateLabel(profile.stayDate)} />
-          <Row label="Guest Notes" value={formatGuestNotesLabel(profile.notes)} />
-          <Row label="Estimated Delivery" value="⏱ 35-40 minutes" />
+          <Row label="Guest" value={order.guestName} />
+          <Row label="Room" value={formatRoomLabel(order.room)} gold />
+          <Row label="Arrival" value={formatStayDateLabel(order.stayDate)} />
+          <Row label="Time" value={formatStayTimeLabel(order.stayTime)} />
+          <Row
+            label="Items"
+            value={`${order.items.reduce(
+              (sum, item) => sum + item.quantity,
+              0,
+            )} selected`}
+          />
+          <Row
+            label="Estimated Delivery"
+            value={`${order.estimatedMinutes}-${
+              order.estimatedMinutes + 10
+            } minutes`}
+          />
           <View style={styles.divider} />
-          <Row label="Total Amount" value="Room charge" gold large />
+          <Row label="Total" value={`$${order.total.toFixed(2)}`} gold large />
         </View>
-        <Text style={styles.body}>Your order will be delivered to your room shortly. Thank you for using our service!</Text>
-        <GradientButton title="Back" onPress={onBack} style={styles.button} />
+        <Text style={styles.body}>
+          Your order has been saved with the room service queue and can be
+          monitored from tracking.
+        </Text>
+        <View style={styles.actions}>
+          <Pressable
+            onPress={onBack}
+            style={({pressed}) => [
+              styles.secondaryButton,
+              pressed && styles.pressed,
+            ]}>
+            <Text style={styles.secondaryText}>Back to Menu</Text>
+          </Pressable>
+          <GradientButton
+            title="Track Order"
+            onPress={onTrack}
+            style={styles.trackButton}
+          />
+        </View>
       </View>
     </ScreenFrame>
   );
 }
 
-function Row({label, value, gold, large}: {label: string; value: string; gold?: boolean; large?: boolean}): React.JSX.Element {
+function Row({
+  label,
+  value,
+  gold,
+  large,
+}: {
+  label: string;
+  value: string;
+  gold?: boolean;
+  large?: boolean;
+}): React.JSX.Element {
   return (
     <View style={styles.row}>
       <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={[styles.rowValue, gold && styles.gold, large && styles.large]}>{value}</Text>
+      <Text
+        style={[styles.rowValue, gold && styles.gold, large && styles.large]}
+        numberOfLines={2}>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -54,7 +121,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 22,
+    gap: 18,
   },
   check: {
     width: 86,
@@ -75,6 +142,12 @@ const styles = StyleSheet.create({
     fontSize: 27,
     fontWeight: '900',
     textAlign: 'center',
+  },
+  reference: {
+    color: colors.gold,
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 0,
   },
   card: {
     alignSelf: 'stretch',
@@ -118,9 +191,35 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: '700',
     textAlign: 'center',
-    maxWidth: 290,
+    maxWidth: 310,
+  },
+  actions: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    gap: 12,
+  },
+  secondaryButton: {
+    flex: 1,
+    minHeight: 56,
+    borderRadius: layout.cardRadius,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  trackButton: {
+    flex: 1,
   },
   button: {
     alignSelf: 'stretch',
+  },
+  pressed: {
+    opacity: 0.78,
   },
 });

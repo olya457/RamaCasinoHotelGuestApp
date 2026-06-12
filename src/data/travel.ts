@@ -284,7 +284,7 @@ const travelDetails: Record<string, TravelLocationDetails> = {
   'kenora-harbourfront': {
     setting: 'Northern Ontario harbourfront on Lake of the Woods',
     detailDescription:
-      "Kenora Harbourfront sits on the northern shores of Lake of the Woods and showcases one of Ontario's most impressive freshwater lake systems. Visitors can walk near marinas and public gathering spaces, watch boats move through the harbour, and enjoy wide northern lake scenery.",
+      "Kenora Harbourfront sits on the northern shores of Lake of the Woods and features one of Ontario's most impressive freshwater lake systems. Visitors can walk near marinas and public gathering spaces, watch boats move through the harbour, and enjoy wide northern lake scenery.",
     highlights: [
       'Boardwalk-style harbourfront spaces and marina views.',
       'Large-scale Lake of the Woods scenery.',

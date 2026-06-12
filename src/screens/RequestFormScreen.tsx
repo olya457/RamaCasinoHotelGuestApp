@@ -1,6 +1,7 @@
 import React, {useMemo, useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {AppHeader} from '../components/AppHeader';
+import {CompactTextKeyboard} from '../components/CompactTextKeyboard';
 import {GradientButton} from '../components/GradientButton';
 import {GradientSurface} from '../components/GradientSurface';
 import {ScreenFrame} from '../components/ScreenFrame';
@@ -8,6 +9,7 @@ import {
   formatGuestNotesLabel,
   formatRoomLabel,
   formatStayDateLabel,
+  formatStayTimeLabel,
   useGuestProfile,
 } from '../context/GuestProfileContext';
 import {requestCategories} from '../data/requests';
@@ -21,55 +23,90 @@ type Props = {
   onSubmitted: () => void;
 };
 
-const descriptionKeys = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
+type ActivePanel = 'examples' | 'priority' | 'timing' | 'details' | null;
 
-export function RequestFormScreen({categoryId, setRequests, onBack, onSubmitted}: Props): React.JSX.Element {
+const priorityOptions = ['Standard', 'High', 'Urgent'];
+const timingOptions = [
+  'As soon as possible',
+  'Within 30 minutes',
+  'Before evening',
+  'After 6 PM',
+];
+
+export function RequestFormScreen({
+  categoryId,
+  setRequests,
+  onBack,
+  onSubmitted,
+}: Props): React.JSX.Element {
   const {profile} = useGuestProfile();
   const [description, setDescription] = useState('');
-  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [priority, setPriority] = useState(priorityOptions[0]);
+  const [timing, setTiming] = useState(timingOptions[0]);
+  const [activePanel, setActivePanel] = useState<ActivePanel>(null);
   const category = useMemo(
-    () => requestCategories.find(item => item.id === categoryId) ?? requestCategories[0],
+    () =>
+      requestCategories.find(item => item.id === categoryId) ??
+      requestCategories[0],
     [categoryId],
   );
-  const canSubmit = description.trim().length > 0;
+  const canSubmit = description.trim().length >= 4;
+
+  const togglePanel = (panel: Exclude<ActivePanel, null>) => {
+    setActivePanel(current => (current === panel ? null : panel));
+  };
 
   const submit = () => {
     if (!canSubmit) {
       return;
     }
+
     const nextRequest: GuestRequest = {
       id: `guest-request-${Date.now()}`,
       categoryId: category.id,
       title: category.title,
-      description: description.trim(),
+      description: buildSubmittedDescription(description, priority, timing),
       status: 'submitted',
       createdAtLabel: 'Just now',
+      progress: 0.18,
       isUserCreated: true,
     };
+
     setRequests(current => [nextRequest, ...current]);
     setDescription('');
-    setKeyboardOpen(false);
+    setPriority(priorityOptions[0]);
+    setTiming(timingOptions[0]);
+    setActivePanel(null);
     onSubmitted();
   };
 
+  const applySuggestion = (value: string) => {
+    setDescription(current => {
+      const trimmed = current.trim();
+
+      if (!trimmed) {
+        return value;
+      }
+
+      if (trimmed.includes(value)) {
+        return trimmed;
+      }
+
+      return `${trimmed}, ${value}`.slice(0, 160);
+    });
+  };
+
+  const selectSuggestion = (value: string) => {
+    applySuggestion(value);
+    setActivePanel(null);
+  };
+
   const addDescriptionCharacter = (character: string) => {
-    setDescription(current => `${current}${character}`.slice(0, 120));
+    setDescription(current => `${current}${character}`.slice(0, 160));
   };
 
   const removeDescriptionCharacter = () => {
     setDescription(current => current.slice(0, -1));
-  };
-
-  const selectExample = (value: string) => {
-    setDescription(current => {
-      const trimmed = current.trim();
-
-      if (!trimmed || trimmed === value) {
-        return value;
-      }
-
-      return `${trimmed}, ${value}`.slice(0, 120);
-    });
   };
 
   return (
@@ -78,91 +115,211 @@ export function RequestFormScreen({categoryId, setRequests, onBack, onSubmitted}
       <ScreenFrame>
         <GradientSurface style={styles.hero}>
           <View style={styles.heroContent}>
-            <Text style={styles.heroTitle}>What do you need?</Text>
+            <Text style={styles.heroTitle}>How can we help?</Text>
             <Text style={styles.heroBody}>
-              Please describe your request in detail. Our staff will respond as quickly as possible.
+              Submit the request with enough detail for hotel staff to route it
+              to the right team.
             </Text>
           </View>
         </GradientSurface>
-        <Text style={styles.label}>Request Description *</Text>
-        <Pressable onPress={() => setKeyboardOpen(current => !current)} style={[styles.input, keyboardOpen && styles.inputActive]}>
-          <Text style={[styles.inputText, !description.trim() && styles.placeholder]} numberOfLines={5}>
-            {description.trim() || 'Please describe your request in detail...'}
-          </Text>
-          <Text style={styles.inputIcon}>⌨️</Text>
-        </Pressable>
-        {keyboardOpen ? (
-          <View style={styles.customKeyboard}>
-            <View style={styles.quickGrid}>
+
+        <View style={styles.dropdownStack}>
+          <DropdownTrigger
+            label="Common request"
+            value="Choose a quick detail"
+            active={activePanel === 'examples'}
+            onPress={() => togglePanel('examples')}
+          />
+          {activePanel === 'examples' ? (
+            <View style={styles.optionPanel}>
               {category.examples.map(example => (
-                <Pressable
+                <DropdownOption
                   key={example}
-                  onPress={() => selectExample(example)}
-                  style={({pressed}) => [
-                    styles.quickButton,
-                    description.includes(example) && styles.quickButtonActive,
-                    pressed && styles.pressed,
-                  ]}>
-                  <Text style={styles.quickEmoji}>{category.icon}</Text>
-                  <Text style={[styles.quickText, description.includes(example) && styles.quickTextActive]} numberOfLines={1}>
-                    {example}
-                  </Text>
-                </Pressable>
+                  label={example}
+                  active={description.includes(example)}
+                  onPress={() => selectSuggestion(example)}
+                />
               ))}
             </View>
-            {descriptionKeys.map(rowKey => (
-              <View key={rowKey} style={styles.keyRow}>
-                {rowKey.split('').map(key => (
-                  <Pressable
-                    key={key}
-                    onPress={() => addDescriptionCharacter(key)}
-                    style={({pressed}) => [styles.key, pressed && styles.pressed]}>
-                    <Text style={styles.keyText}>{key}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            ))}
-            <View style={styles.keyRow}>
-              <Pressable onPress={() => addDescriptionCharacter(' ')} style={({pressed}) => [styles.spaceKey, pressed && styles.pressed]}>
-                <Text style={styles.keyText}>space</Text>
-              </Pressable>
-              <Pressable onPress={removeDescriptionCharacter} style={({pressed}) => [styles.actionKey, pressed && styles.pressed]}>
-                <Text style={styles.keyText}>⌫</Text>
-              </Pressable>
-              <Pressable onPress={() => setDescription('')} style={({pressed}) => [styles.actionKey, pressed && styles.pressed]}>
-                <Text style={styles.keyText}>clear</Text>
-              </Pressable>
-              <Pressable onPress={() => setKeyboardOpen(false)} style={({pressed}) => [styles.actionKey, pressed && styles.pressed]}>
-                <Text style={styles.keyText}>✓</Text>
-              </Pressable>
-            </View>
+          ) : null}
+
+          <View style={styles.dropdownRow}>
+            <DropdownTrigger
+              label="Priority"
+              value={priority}
+              active={activePanel === 'priority'}
+              onPress={() => togglePanel('priority')}
+              compact
+            />
+            <DropdownTrigger
+              label="Needed"
+              value={timing}
+              active={activePanel === 'timing'}
+              onPress={() => togglePanel('timing')}
+              compact
+            />
           </View>
+
+          {activePanel === 'priority' ? (
+            <View style={styles.optionPanelInline}>
+              {priorityOptions.map(option => (
+                <DropdownOption
+                  key={option}
+                  label={option}
+                  active={priority === option}
+                  onPress={() => {
+                    setPriority(option);
+                    setActivePanel(null);
+                  }}
+                />
+              ))}
+            </View>
+          ) : null}
+
+          {activePanel === 'timing' ? (
+            <View style={styles.optionPanelInline}>
+              {timingOptions.map(option => (
+                <DropdownOption
+                  key={option}
+                  label={option}
+                  active={timing === option}
+                  onPress={() => {
+                    setTiming(option);
+                    setActivePanel(null);
+                  }}
+                />
+              ))}
+            </View>
+          ) : null}
+        </View>
+
+        <Text style={styles.label}>Request details</Text>
+        <Pressable
+          onPress={() => togglePanel('details')}
+          style={({pressed}) => [
+            styles.input,
+            activePanel === 'details' && styles.inputActive,
+            pressed && styles.pressed,
+          ]}>
+          <Text
+            style={[styles.inputText, !description.trim() && styles.placeholder]}
+            numberOfLines={4}>
+            {description.trim() || 'Describe what you need'}
+          </Text>
+          <Text style={styles.keyboardIcon}>⌨️</Text>
+        </Pressable>
+        {activePanel === 'details' ? (
+          <CompactTextKeyboard
+            onPressKey={addDescriptionCharacter}
+            onBackspace={removeDescriptionCharacter}
+            onClear={() => setDescription('')}
+            onDone={() => setActivePanel(null)}
+          />
         ) : null}
-        <View style={styles.exampleCard}>
-          <Text style={styles.exampleTitle}>Example requests:</Text>
-          {category.examples.map(example => (
-            <Text key={example} style={styles.exampleText}>
-              • {example}
-            </Text>
-          ))}
-        </View>
+
         <View style={styles.guestCard}>
-          <Row label="Your Room" value={formatRoomLabel(profile.room)} gold />
-          <Row label="Arrival Date" value={formatStayDateLabel(profile.stayDate)} />
-          <Row label="Guest Notes" value={formatGuestNotesLabel(profile.notes)} />
-          <Row label="Guest Name" value={profile.name} />
+          <Text style={styles.guestCardTitle}>Register details</Text>
+          <Row label="Room" value={formatRoomLabel(profile.room)} gold />
+          <Row label="Arrival" value={formatStayDateLabel(profile.stayDate)} />
+          <Row label="Time" value={formatStayTimeLabel(profile.stayTime)} />
+          <Row
+            label="Guest Notes"
+            value={formatGuestNotesLabel(profile.notes)}
+          />
+          <Row label="Guest" value={profile.name} />
         </View>
-        <GradientButton title="Submit Request" icon="✈️" disabled={!canSubmit} onPress={submit} />
+        <GradientButton
+          title="Submit Request"
+          disabled={!canSubmit}
+          onPress={submit}
+        />
       </ScreenFrame>
     </View>
   );
 }
 
-function Row({label, value, gold}: {label: string; value: string; gold?: boolean}): React.JSX.Element {
+function buildSubmittedDescription(
+  description: string,
+  priority: string,
+  timing: string,
+): string {
+  return `${description.trim()} · ${priority} priority · ${timing}`;
+}
+
+function DropdownTrigger({
+  label,
+  value,
+  active,
+  compact,
+  onPress,
+}: {
+  label: string;
+  value: string;
+  active: boolean;
+  compact?: boolean;
+  onPress: () => void;
+}): React.JSX.Element {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({pressed}) => [
+        styles.dropdownTrigger,
+        compact && styles.dropdownTriggerCompact,
+        active && styles.dropdownTriggerActive,
+        pressed && styles.pressed,
+      ]}>
+      <View style={styles.dropdownCopy}>
+        <Text style={styles.dropdownLabel}>{label}</Text>
+        <Text style={styles.dropdownValue} numberOfLines={1}>
+          {value}
+        </Text>
+      </View>
+      <Text style={styles.dropdownChevron}>{active ? '⌃' : '⌄'}</Text>
+    </Pressable>
+  );
+}
+
+function DropdownOption({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}): React.JSX.Element {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({pressed}) => [
+        styles.optionButton,
+        active && styles.optionButtonActive,
+        pressed && styles.pressed,
+      ]}>
+      <Text
+        style={[styles.optionText, active && styles.optionTextActive]}
+        numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function Row({
+  label,
+  value,
+  gold,
+}: {
+  label: string;
+  value: string;
+  gold?: boolean;
+}): React.JSX.Element {
   return (
     <View style={styles.row}>
       <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={[styles.rowValue, gold && styles.gold]}>{value}</Text>
+      <Text style={[styles.rowValue, gold && styles.gold]} numberOfLines={2}>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -173,19 +330,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.black,
   },
   hero: {
-    minHeight: 124,
+    minHeight: 112,
     borderRadius: layout.cardRadius,
-    marginBottom: 18,
+    marginBottom: 14,
   },
   heroContent: {
     flex: 1,
     justifyContent: 'center',
-    padding: 20,
-    gap: 12,
+    padding: 18,
+    gap: 10,
   },
   heroTitle: {
     color: colors.white,
-    fontSize: 23,
+    fontSize: 22,
     fontWeight: '900',
   },
   heroBody: {
@@ -194,6 +351,95 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     fontWeight: '600',
   },
+  dropdownStack: {
+    gap: 8,
+    marginBottom: 14,
+  },
+  dropdownRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  dropdownTrigger: {
+    minHeight: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  dropdownTriggerCompact: {
+    flex: 1,
+  },
+  dropdownTriggerActive: {
+    borderColor: colors.orange,
+    backgroundColor: 'rgba(255, 139, 31, 0.16)',
+  },
+  dropdownCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  dropdownLabel: {
+    color: colors.muted,
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  dropdownValue: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  dropdownChevron: {
+    color: colors.gold,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  optionPanel: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#101010',
+    padding: 8,
+    gap: 8,
+  },
+  optionPanelInline: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#101010',
+    padding: 8,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  optionButton: {
+    minHeight: 38,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceSoft,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    flexGrow: 1,
+  },
+  optionButtonActive: {
+    borderColor: colors.orange,
+    backgroundColor: 'rgba(255, 139, 31, 0.18)',
+  },
+  optionText: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  optionTextActive: {
+    color: colors.gold,
+  },
   label: {
     color: colors.text,
     fontSize: 16,
@@ -201,7 +447,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   input: {
-    minHeight: 198,
+    minHeight: 122,
     borderRadius: layout.cardRadius,
     borderWidth: 1,
     borderColor: colors.border,
@@ -211,131 +457,39 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 14,
   },
+  inputActive: {
+    borderColor: colors.orange,
+    backgroundColor: 'rgba(255, 139, 31, 0.08)',
+  },
   inputText: {
     color: colors.text,
-    fontSize: 16,
-    lineHeight: 22,
-    fontWeight: '700',
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: '800',
     flex: 1,
-  },
-  inputActive: {
-    borderColor: 'rgba(239, 48, 40, 0.5)',
   },
   placeholder: {
     color: colors.dim,
   },
-  inputIcon: {
+  keyboardIcon: {
+    color: colors.muted,
     fontSize: 16,
+    lineHeight: 22,
   },
-  customKeyboard: {
-    marginTop: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: '#101010',
-    padding: 8,
-    gap: 7,
-  },
-  quickGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 2,
-  },
-  quickButton: {
-    width: '100%',
-    minHeight: 38,
+  guestCard: {
+    marginVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.surfaceSoft,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    padding: 12,
     gap: 8,
-    paddingHorizontal: 10,
   },
-  quickButtonActive: {
-    borderColor: colors.orange,
-    backgroundColor: 'rgba(255, 139, 31, 0.16)',
-  },
-  quickEmoji: {
-    fontSize: 14,
-  },
-  quickText: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '900',
-    flexShrink: 1,
-  },
-  quickTextActive: {
-    color: colors.gold,
-  },
-  keyRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  key: {
-    width: 24,
-    height: 30,
-    borderRadius: 8,
-    backgroundColor: colors.surfaceSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  spaceKey: {
-    flex: 1,
-    height: 32,
-    borderRadius: 9,
-    backgroundColor: colors.surfaceSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionKey: {
-    width: 52,
-    height: 32,
-    borderRadius: 9,
-    backgroundColor: colors.surfaceSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  keyText: {
+  guestCardTitle: {
     color: colors.text,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '900',
-  },
-  pressed: {
-    opacity: 0.78,
-  },
-  exampleCard: {
-    marginTop: 16,
-    borderRadius: layout.cardRadius,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: 16,
-    gap: 12,
-  },
-  exampleTitle: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  exampleText: {
-    color: colors.muted,
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '700',
-  },
-  guestCard: {
-    marginVertical: 16,
-    borderRadius: layout.cardRadius,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: 14,
-    gap: 12,
+    marginBottom: 2,
   },
   row: {
     flexDirection: 'row',
@@ -344,17 +498,21 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     color: colors.muted,
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
   },
   rowValue: {
     color: colors.text,
-    fontSize: 14,
+    fontSize: 12,
+    lineHeight: 16,
     fontWeight: '900',
     textAlign: 'right',
-    flexShrink: 1,
+    flex: 1,
   },
   gold: {
     color: colors.gold,
+  },
+  pressed: {
+    opacity: 0.78,
   },
 });

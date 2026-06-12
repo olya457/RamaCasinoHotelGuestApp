@@ -1,12 +1,18 @@
 import type {ImageSourcePropType} from 'react-native';
 
-export type MainTab = 'room' | 'requests' | 'entertainment' | 'climate' | 'travel' | 'map';
+export type MainTab =
+  | 'room'
+  | 'requests'
+  | 'entertainment'
+  | 'climate'
+  | 'travel'
+  | 'map';
 
 export type AppRoute =
   | {name: 'tab'; tab: MainTab}
   | {name: 'roomCategory'; categoryId: MenuCategoryId}
   | {name: 'orderSummary'}
-  | {name: 'orderConfirmed'}
+  | {name: 'orderConfirmed'; orderId: string}
   | {name: 'requestForm'; categoryId: RequestCategoryId}
   | {name: 'trackRequests'}
   | {name: 'amenityDetail'; amenityId: string}
@@ -38,7 +44,33 @@ export type GuestProfile = {
   name: string;
   room: string;
   stayDate?: string;
+  stayTime?: string;
   notes?: string;
+};
+
+export type RoomServiceOrderItem = {
+  itemId: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+};
+
+export type RoomServiceOrder = {
+  id: string;
+  confirmationCode: string;
+  guestName: string;
+  room: string;
+  stayDate?: string;
+  stayTime?: string;
+  notes?: string;
+  instructions?: string;
+  items: RoomServiceOrderItem[];
+  subtotal: number;
+  tax: number;
+  delivery: number;
+  total: number;
+  createdAt: number;
+  estimatedMinutes: number;
 };
 
 export type RequestCategoryId =
@@ -81,7 +113,12 @@ export type ClimateSettings = {
   sleepMode: boolean;
 };
 
-export type TravelCategory = 'all' | 'lakeside' | 'nature' | 'beach' | 'waterfront';
+export type TravelCategory =
+  | 'all'
+  | 'lakeside'
+  | 'nature'
+  | 'beach'
+  | 'waterfront';
 
 export type TravelLocation = {
   id: string;

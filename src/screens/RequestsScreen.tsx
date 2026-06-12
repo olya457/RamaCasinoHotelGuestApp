@@ -11,22 +11,34 @@ type Props = {
   onTrack: () => void;
 };
 
-export function RequestsScreen({onOpenCategory, onTrack}: Props): React.JSX.Element {
+export function RequestsScreen({
+  onOpenCategory,
+  onTrack,
+}: Props): React.JSX.Element {
   return (
     <View style={styles.root}>
       <AppHeader title="Guest Requests" />
       <ScreenFrame>
-        <Pressable onPress={onTrack} style={({pressed}) => [styles.trackButton, pressed && styles.pressed]}>
+        <Pressable
+          onPress={onTrack}
+          style={({pressed}) => [
+            styles.trackButton,
+            pressed && styles.pressed,
+          ]}>
           <Text style={styles.trackIcon}>☑️</Text>
-          <Text style={styles.trackText}>Track My Requests</Text>
+          <Text style={styles.trackText}>Track Orders & Requests</Text>
         </Pressable>
         <View style={styles.grid}>
           {requestCategories.map(category => (
             <Pressable
               key={category.id}
               onPress={() => onOpenCategory(category.id)}
-              style={({pressed}) => [styles.categoryCard, pressed && styles.pressed]}>
-              <View style={[styles.iconCircle, {backgroundColor: category.color}]}>
+              style={({pressed}) => [
+                styles.categoryCard,
+                pressed && styles.pressed,
+              ]}>
+              <View
+                style={[styles.iconCircle, {backgroundColor: category.color}]}>
                 <Text style={styles.categoryIcon}>{category.icon}</Text>
               </View>
               <Text style={styles.categoryTitle}>{category.title}</Text>

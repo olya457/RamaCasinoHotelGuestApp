@@ -22,7 +22,15 @@ class AppDelegate: RCTAppDelegate {
 
   override func bundleURL() -> URL? {
 #if DEBUG
-    RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
+    if let metroURL = RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index") {
+      return metroURL
+    }
+
+    #if targetEnvironment(simulator)
+    return URL(string: "http://localhost:8081/index.bundle?platform=ios&dev=true&minify=false")
+    #else
+    return Bundle.main.url(forResource: "main", withExtension: "jsbundle")
+    #endif
 #else
     Bundle.main.url(forResource: "main", withExtension: "jsbundle")
 #endif

@@ -19,27 +19,27 @@ type Props = {
 const slides = [
   {
     title: 'Welcome to Rama Casino Hotel',
-    body: 'Experience luxury and entertainment at your fingertips with a complete guest journey in one place.',
+    body: 'Use one guest companion for room service, hotel requests, room comfort, dining, wellness, and nearby travel.',
     image: imageAssets.onboardingExterior,
   },
   {
-    title: 'Room Service at Your Command',
-    body: 'Order breakfast, lunch, dinner, or late-night snacks directly to your room with just a few taps.',
+    title: 'Order to Your Room',
+    body: 'Build a room service order, add delivery notes, and track it from confirmation to delivery.',
     image: imageAssets.onboardingLobby,
   },
   {
     title: 'Smart Climate Control',
-    body: "Control your room's temperature, fan speed, and comfort settings from anywhere in the resort.",
+    body: "Adjust your room's temperature, fan speed, sleep mode, and heating or cooling preferences.",
     image: imageAssets.onboardingSuite,
   },
   {
     title: 'Entertainment & Wellness',
-    body: 'Book spa treatments, reserve restaurant tables, and explore our world-class amenities.',
+    body: 'Find pool, spa, fitness, dining, and bar details with hours, access notes, and guest service contacts.',
     image: imageAssets.onboardingNight,
   },
   {
     title: 'Your Stay, Simplified',
-    body: 'Manage room service, comfort settings, wellness, dining, and local travel from a single guest companion.',
+    body: 'Set up your stay once so orders and requests are routed with your guest name and room.',
     image: imageAssets.onboardingPool,
   },
 ];
@@ -49,7 +49,10 @@ export function OnboardingScreen({onDone}: Props): React.JSX.Element {
   const {height, width} = useWindowDimensions();
   const isSmall = height < 720 || width < 360;
   const slide = slides[index];
-  const imageHeight = useMemo(() => Math.max(280, Math.min(height * 0.48, 430)), [height]);
+  const imageHeight = useMemo(
+    () => Math.max(280, Math.min(height * 0.48, 430)),
+    [height],
+  );
 
   const next = () => {
     if (index === slides.length - 1) {
@@ -61,15 +64,24 @@ export function OnboardingScreen({onDone}: Props): React.JSX.Element {
 
   return (
     <View style={styles.root}>
-      <ImageBackground source={slide.image} resizeMode="cover" style={[styles.image, {height: imageHeight}]}>
+      <ImageBackground
+        source={slide.image}
+        resizeMode="cover"
+        style={[styles.image, {height: imageHeight}]}>
         <View style={styles.imageShade} />
       </ImageBackground>
-      <Pressable onPress={onDone} style={[styles.skip, {top: layout.androidTopInset + 38}]}>
+      <Pressable
+        onPress={onDone}
+        style={[styles.skip, {top: layout.androidTopInset + 38}]}>
         <Text style={styles.skipText}>Skip</Text>
       </Pressable>
       <View style={[styles.content, isSmall && styles.contentSmall]}>
-        <Text style={[styles.title, isSmall && styles.titleSmall]}>{slide.title}</Text>
-        <Text style={[styles.body, isSmall && styles.bodySmall]}>{slide.body}</Text>
+        <Text style={[styles.title, isSmall && styles.titleSmall]}>
+          {slide.title}
+        </Text>
+        <Text style={[styles.body, isSmall && styles.bodySmall]}>
+          {slide.body}
+        </Text>
         <View style={styles.dots}>
           {slides.map((_, dotIndex) =>
             dotIndex === index ? (
@@ -79,7 +91,10 @@ export function OnboardingScreen({onDone}: Props): React.JSX.Element {
             ),
           )}
         </View>
-        <GradientButton title={index === slides.length - 1 ? 'Get Started' : 'Continue'} onPress={next} />
+        <GradientButton
+          title={index === slides.length - 1 ? 'Set Up Stay' : 'Continue'}
+          onPress={next}
+        />
       </View>
     </View>
   );

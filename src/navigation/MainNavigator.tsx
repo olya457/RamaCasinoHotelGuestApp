@@ -15,13 +15,22 @@ import {TravelScreen} from '../screens/TravelScreen';
 import {TravelLocationDetailScreen} from '../screens/TravelLocationDetailScreen';
 import {MapScreen} from '../screens/MapScreen';
 import {colors} from '../theme/theme';
-import type {AppRoute, CartState, ClimateSettings, GuestRequest, MainTab} from '../types/app';
+import type {
+  AppRoute,
+  CartState,
+  ClimateSettings,
+  GuestRequest,
+  MainTab,
+  RoomServiceOrder,
+} from '../types/app';
 
 type Props = {
   cart: CartState;
   setCart: React.Dispatch<React.SetStateAction<CartState>>;
   requests: GuestRequest[];
   setRequests: React.Dispatch<React.SetStateAction<GuestRequest[]>>;
+  orders: RoomServiceOrder[];
+  setOrders: React.Dispatch<React.SetStateAction<RoomServiceOrder[]>>;
   climate: ClimateSettings;
   setClimate: React.Dispatch<React.SetStateAction<ClimateSettings>>;
 };
@@ -31,18 +40,26 @@ export function MainNavigator({
   setCart,
   requests,
   setRequests,
+  orders,
+  setOrders,
   climate,
   setClimate,
 }: Props): React.JSX.Element {
   const [stack, setStack] = useState<AppRoute[]>([{name: 'tab', tab: 'room'}]);
-  const [selectedLocationId, setSelectedLocationId] = useState<string | undefined>();
+  const [selectedLocationId, setSelectedLocationId] = useState<
+    string | undefined
+  >();
   const route = stack[stack.length - 1];
 
   const activeTab = useMemo<MainTab>(() => {
     if (route.name === 'tab') {
       return route.tab;
     }
-    if (route.name === 'roomCategory' || route.name === 'orderSummary' || route.name === 'orderConfirmed') {
+    if (
+      route.name === 'roomCategory' ||
+      route.name === 'orderSummary' ||
+      route.name === 'orderConfirmed'
+    ) {
       return 'room';
     }
     if (route.name === 'requestForm' || route.name === 'trackRequests') {
@@ -57,8 +74,10 @@ export function MainNavigator({
     return 'room';
   }, [route]);
 
-  const push = (nextRoute: AppRoute) => setStack(current => [...current, nextRoute]);
-  const goBack = () => setStack(current => (current.length > 1 ? current.slice(0, -1) : current));
+  const push = (nextRoute: AppRoute) =>
+    setStack(current => [...current, nextRoute]);
+  const goBack = () =>
+    setStack(current => (current.length > 1 ? current.slice(0, -1) : current));
   const selectTab = (tab: MainTab) => setStack([{name: 'tab', tab}]);
 
   const showMapLocation = (locationId: string) => {
@@ -84,11 +103,18 @@ export function MainNavigator({
             cart={cart}
             setCart={setCart}
             onBack={goBack}
-            onConfirmed={() => push({name: 'orderConfirmed'})}
+            setOrders={setOrders}
+            onConfirmed={orderId => push({name: 'orderConfirmed', orderId})}
           />
         );
       case 'orderConfirmed':
-        return <OrderConfirmedScreen onBack={() => selectTab('room')} />;
+        return (
+          <OrderConfirmedScreen
+            order={orders.find(order => order.id === route.orderId)}
+            onBack={() => selectTab('room')}
+            onTrack={() => push({name: 'trackRequests'})}
+          />
+        );
       case 'requestForm':
         return (
           <RequestFormScreen
@@ -99,37 +125,76 @@ export function MainNavigator({
           />
         );
       case 'trackRequests':
-        return <TrackRequestsScreen requests={requests} setRequests={setRequests} onBack={goBack} />;
+        return (
+          <TrackRequestsScreen
+            requests={requests}
+            setRequests={setRequests}
+            orders={orders}
+            setOrders={setOrders}
+            onBack={goBack}
+          />
+        );
       case 'amenityDetail':
-        return <AmenityDetailScreen amenityId={route.amenityId} onBack={goBack} />;
+        return (
+          <AmenityDetailScreen amenityId={route.amenityId} onBack={goBack} />
+        );
       case 'travelLocationDetail':
-        return <TravelLocationDetailScreen locationId={route.locationId} onBack={goBack} onViewOnMap={showMapLocation} />;
+        return (
+          <TravelLocationDetailScreen
+            locationId={route.locationId}
+            onBack={goBack}
+            onViewOnMap={showMapLocation}
+          />
+        );
       case 'tab':
         if (route.tab === 'room') {
-          return <RoomServiceScreen onOpenCategory={categoryId => push({name: 'roomCategory', categoryId})} />;
+          return (
+            <RoomServiceScreen
+              onOpenCategory={categoryId =>
+                push({name: 'roomCategory', categoryId})
+              }
+            />
+          );
         }
         if (route.tab === 'requests') {
           return (
             <RequestsScreen
-              onOpenCategory={categoryId => push({name: 'requestForm', categoryId})}
+              onOpenCategory={categoryId =>
+                push({name: 'requestForm', categoryId})
+              }
               onTrack={() => push({name: 'trackRequests'})}
             />
           );
         }
         if (route.tab === 'entertainment') {
-          return <EntertainmentScreen onOpenAmenity={amenityId => push({name: 'amenityDetail', amenityId})} />;
+          return (
+            <EntertainmentScreen
+              onOpenAmenity={amenityId =>
+                push({name: 'amenityDetail', amenityId})
+              }
+            />
+          );
         }
         if (route.tab === 'climate') {
           return <ClimateScreen climate={climate} setClimate={setClimate} />;
         }
         if (route.tab === 'travel') {
-          return <TravelScreen onViewOnMap={showMapLocation} onOpenDetails={locationId => push({name: 'travelLocationDetail', locationId})} />;
+          return (
+            <TravelScreen
+              onViewOnMap={showMapLocation}
+              onOpenDetails={locationId =>
+                push({name: 'travelLocationDetail', locationId})
+              }
+            />
+          );
         }
         return (
           <MapScreen
             selectedLocationId={selectedLocationId}
             onSelectLocation={setSelectedLocationId}
-            onOpenLocationDetails={locationId => push({name: 'travelLocationDetail', locationId})}
+            onOpenLocationDetails={locationId =>
+              push({name: 'travelLocationDetail', locationId})
+            }
           />
         );
     }

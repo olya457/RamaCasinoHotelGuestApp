@@ -4,6 +4,7 @@ export const storageKeys = {
   onboardingComplete: 'ramaCasinoHotel.onboardingComplete',
   cart: 'ramaCasinoHotel.cart',
   requests: 'ramaCasinoHotel.requests',
+  orders: 'ramaCasinoHotel.orders',
   climate: 'ramaCasinoHotel.climate',
   guestProfile: 'ramaCasinoHotel.guestProfile',
 };
