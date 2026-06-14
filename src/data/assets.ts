@@ -42,6 +42,11 @@ export const imageAssets: Record<string, ImageSourcePropType> = {
   cobourgBeach: require('../assets/CobourgBeach.png'),
   portStanleyMainBeach: require('../assets/PortStanleyMainBeach.png'),
   canataraBeach: require('../assets/DurhamLiveEntertainmentDistrict.png'),
+  downtownOrillia: require('../assets/DowntownOrillia.png'),
+  orilliaOperaHouse: require('../assets/OrilliaOperaHouse.png'),
+  orilliaMuseumArtHistory: require('../assets/OrilliaMuseumArtHistory.png'),
+  stephenLeacockMuseum: require('../assets/StephenLeacockMuseum.png'),
+  mnjikaningFishWeirs: require('../assets/MnjikaningFishWeirs.png'),
   indoorHeatedPool: require('../assets/IndoorHeatedPool.png'),
   hotTub: require('../assets/HotTub.png'),
   sauna: require('../assets/Sauna.png'),
@@ -55,4 +60,5 @@ export const imageAssets: Record<string, ImageSourcePropType> = {
   firestarterLounge: require('../assets/FirestarterLounge.png'),
   centreBar: require('../assets/CentreBar.png'),
   theWeirs: require('../assets/TheWeirs.png'),
+  visitorEssentials: require('../assets/VisitorEssentials.png'),
 };

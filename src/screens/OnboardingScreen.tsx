@@ -18,28 +18,28 @@ type Props = {
 
 const slides = [
   {
-    title: 'Welcome to Rama Casino Hotel',
-    body: 'Use one guest companion for room service, hotel requests, room comfort, dining, wellness, and nearby travel.',
+    title: 'Rama Resort Guide',
+    body: 'Plan a public visit to Casino Rama Resort with dining, shows, hotel amenities, local tips, and nearby Orillia places.',
     image: imageAssets.onboardingExterior,
   },
   {
-    title: 'Order to Your Room',
-    body: 'Build a room service order, add delivery notes, and track it from confirmation to delivery.',
+    title: 'Dining Without Guesswork',
+    body: 'Browse onsite restaurants and bars, save ideas, and open official resort pages before you go.',
     image: imageAssets.onboardingLobby,
   },
   {
-    title: 'Smart Climate Control',
-    body: "Adjust your room's temperature, fan speed, sleep mode, and heating or cooling preferences.",
+    title: 'Shows, Hotel & Wellness',
+    body: 'Find visitor-friendly details for the Entertainment Centre, hotel amenities, spa, pool, and fitness areas.',
     image: imageAssets.onboardingSuite,
   },
   {
-    title: 'Entertainment & Wellness',
-    body: 'Find pool, spa, fitness, dining, and bar details with hours, access notes, and guest service contacts.',
+    title: 'Explore Nearby Orillia',
+    body: 'Use the map for the resort, Lake Couchiching, downtown Orillia, culture stops, and directions.',
     image: imageAssets.onboardingNight,
   },
   {
-    title: 'Your Stay, Simplified',
-    body: 'Set up your stay once so orders and requests are routed with your guest name and room.',
+    title: 'Your Local Itinerary',
+    body: 'Save places, keep a checklist, and write local notes on this device. No checkout, payments, or staff workflows.',
     image: imageAssets.onboardingPool,
   },
 ];
@@ -92,7 +92,7 @@ export function OnboardingScreen({onDone}: Props): React.JSX.Element {
           )}
         </View>
         <GradientButton
-          title={index === slides.length - 1 ? 'Set Up Stay' : 'Continue'}
+          title={index === slides.length - 1 ? 'Open Guide' : 'Continue'}
           onPress={next}
         />
       </View>

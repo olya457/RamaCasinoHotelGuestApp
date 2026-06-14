@@ -1,22 +1,44 @@
 import type {ImageSourcePropType} from 'react-native';
 
-export type MainTab =
-  | 'room'
-  | 'requests'
-  | 'entertainment'
-  | 'climate'
-  | 'travel'
-  | 'map';
+export type MainTab = 'guide' | 'dining' | 'itinerary' | 'nearby' | 'map';
 
 export type AppRoute =
   | {name: 'tab'; tab: MainTab}
-  | {name: 'roomCategory'; categoryId: MenuCategoryId}
-  | {name: 'orderSummary'}
-  | {name: 'orderConfirmed'; orderId: string}
-  | {name: 'requestForm'; categoryId: RequestCategoryId}
-  | {name: 'trackRequests'}
-  | {name: 'amenityDetail'; amenityId: string}
-  | {name: 'travelLocationDetail'; locationId: string};
+  | {name: 'placeDetail'; placeId: string};
+
+export type GuideCategory =
+  | 'resort'
+  | 'dining'
+  | 'entertainment'
+  | 'wellness'
+  | 'nearby'
+  | 'practical';
+
+export type GuidePlace = {
+  id: string;
+  name: string;
+  category: GuideCategory;
+  icon: string;
+  image: ImageSourcePropType;
+  shortDescription: string;
+  detailDescription: string;
+  locationLabel: string;
+  hours: string;
+  officialUrl?: string;
+  ageNote?: string;
+  coordinates?: {
+    latitude: number;
+    longitude: number;
+  };
+  highlights: string[];
+  tips: string[];
+};
+
+export type ItineraryState = {
+  savedPlaceIds: string[];
+  notes: string;
+  checklist: Record<string, boolean>;
+};
 
 export type MenuCategoryId = 'breakfast' | 'allday' | 'latenight';
 

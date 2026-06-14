@@ -1,7 +1,12 @@
 import React from 'react';
-import {Pressable, StyleSheet, Text, useWindowDimensions, View} from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import {colors, layout} from '../theme/theme';
-import {GuestBadge} from './GuestBadge';
 
 type Props = {
   title: string;
@@ -10,7 +15,12 @@ type Props = {
   action?: React.ReactNode;
 };
 
-export function AppHeader({title, onBack, showGuest = true, action}: Props): React.JSX.Element {
+export function AppHeader({
+  title,
+  onBack,
+  showGuest = true,
+  action,
+}: Props): React.JSX.Element {
   const {height, width} = useWindowDimensions();
   const compact = width <= 375 || height <= 720;
 
@@ -18,15 +28,27 @@ export function AppHeader({title, onBack, showGuest = true, action}: Props): Rea
     <View style={[styles.header, compact && styles.headerCompact]}>
       <View style={styles.titleWrap}>
         {onBack ? (
-          <Pressable onPress={onBack} style={[styles.backButton, compact && styles.backButtonCompact]}>
-            <Text style={[styles.backIcon, compact && styles.backIconCompact]}>‹</Text>
+          <Pressable
+            onPress={onBack}
+            style={[styles.backButton, compact && styles.backButtonCompact]}>
+            <Text style={[styles.backIcon, compact && styles.backIconCompact]}>
+              ‹
+            </Text>
           </Pressable>
         ) : null}
-        <Text style={[styles.title, compact && styles.titleCompact]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.76}>
+        <Text
+          style={[styles.title, compact && styles.titleCompact]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.76}>
           {title}
         </Text>
       </View>
-      {action ?? (showGuest ? <GuestBadge /> : <View style={styles.spacer} />)}
+      {action ?? (
+        <View style={showGuest ? styles.guideBadge : styles.spacer}>
+          {showGuest ? <Text style={styles.guideBadgeText}>19+</Text> : null}
+        </View>
+      )}
     </View>
   );
 }
@@ -92,5 +114,21 @@ const styles = StyleSheet.create({
   },
   spacer: {
     width: 1,
+  },
+  guideBadge: {
+    minWidth: 46,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 189, 0, 0.42)',
+    backgroundColor: 'rgba(245, 189, 0, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  guideBadgeText: {
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '900',
   },
 });

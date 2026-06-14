@@ -2,11 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const storageKeys = {
   onboardingComplete: 'ramaCasinoHotel.onboardingComplete',
-  cart: 'ramaCasinoHotel.cart',
-  requests: 'ramaCasinoHotel.requests',
-  orders: 'ramaCasinoHotel.orders',
-  climate: 'ramaCasinoHotel.climate',
-  guestProfile: 'ramaCasinoHotel.guestProfile',
+  itinerary: 'ramaCasinoHotel.itinerary',
 };
 
 export async function loadJSON<T>(key: string, fallback: T): Promise<T> {

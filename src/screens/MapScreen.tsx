@@ -1,123 +1,169 @@
-import React, {useEffect, useMemo, useRef, useState} from 'react';
-import {Image, Linking, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View} from 'react-native';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {
+  Image,
+  Linking,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import MapView, {Marker, PROVIDER_GOOGLE, type Region} from 'react-native-maps';
 import {AppHeader} from '../components/AppHeader';
 import {GradientButton} from '../components/GradientButton';
 import {ScreenFrame} from '../components/ScreenFrame';
-import {travelCategories, travelLocations} from '../data/travel';
+import {
+  guideCategoryColors,
+  guideCategoryLabels,
+  mapPlaces,
+} from '../data/guide';
 import {colors, layout, shadow} from '../theme/theme';
-import type {TravelCategory, TravelLocation} from '../types/app';
+import type {GuideCategory, GuidePlace} from '../types/app';
 
 type Props = {
-  selectedLocationId?: string;
-  onSelectLocation: (locationId: string) => void;
-  onOpenLocationDetails: (locationId: string) => void;
+  selectedPlaceId?: string;
+  onSelectPlace: (placeId: string) => void;
+  onOpenPlaceDetails: (placeId: string) => void;
 };
 
-const categoryColors: Record<Exclude<TravelCategory, 'all'>, string> = {
-  lakeside: '#3b82f6',
-  nature: colors.green,
-  beach: '#f4a51c',
-  waterfront: colors.purple,
-};
+type MapFilter = 'all' | GuideCategory;
+
+const filters: {id: MapFilter; label: string}[] = [
+  {id: 'all', label: 'All'},
+  {id: 'resort', label: 'Resort'},
+  {id: 'dining', label: 'Dining'},
+  {id: 'entertainment', label: 'Shows'},
+  {id: 'nearby', label: 'Nearby'},
+  {id: 'wellness', label: 'Wellness'},
+  {id: 'practical', label: 'Tips'},
+];
 
 const darkMapStyle = [
   {elementType: 'geometry', stylers: [{color: '#0b0b0b'}]},
   {elementType: 'labels.text.stroke', stylers: [{color: '#0b0b0b'}]},
   {elementType: 'labels.text.fill', stylers: [{color: '#747474'}]},
-  {featureType: 'water', elementType: 'geometry', stylers: [{color: '#050505'}]},
+  {
+    featureType: 'water',
+    elementType: 'geometry',
+    stylers: [{color: '#050505'}],
+  },
   {featureType: 'road', elementType: 'geometry', stylers: [{color: '#171717'}]},
   {featureType: 'poi', elementType: 'geometry', stylers: [{color: '#101010'}]},
 ];
 
-export function MapScreen({selectedLocationId, onSelectLocation, onOpenLocationDetails}: Props): React.JSX.Element {
+export function MapScreen({
+  selectedPlaceId,
+  onSelectPlace,
+  onOpenPlaceDetails,
+}: Props): React.JSX.Element {
   const mapRef = useRef<MapView>(null);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [category, setCategory] = useState<TravelCategory>('all');
+  const [filter, setFilter] = useState<MapFilter>('all');
   const {width, height} = useWindowDimensions();
   const compact = width <= 375 || height <= 720;
-  const filteredLocations = useMemo(
-    () => travelLocations.filter(location => category === 'all' || location.category === category),
-    [category],
+  const filteredPlaces = useMemo(
+    () =>
+      mapPlaces.filter(place => filter === 'all' || place.category === filter),
+    [filter],
   );
-  const fallbackLocation = filteredLocations[0] ?? travelLocations[0];
-  const selectedLocation = selectedLocationId
-    ? travelLocations.find(location => location.id === selectedLocationId)
+  const fallbackPlace = filteredPlaces[0] ?? mapPlaces[0];
+  const selectedPlace = selectedPlaceId
+    ? mapPlaces.find(place => place.id === selectedPlaceId)
     : undefined;
-  const bottomPanelOffset = (compact ? layout.compactTabHeight : layout.tabHeight) + layout.navGap + 16;
-  const [region, setRegion] = useState<Region>(() => createRegion(selectedLocation ?? fallbackLocation, 6.5));
+  const bottomPanelOffset =
+    (compact ? layout.compactTabHeight : layout.tabHeight) + layout.navGap + 16;
+  const [region, setRegion] = useState<Region>(() =>
+    createRegion(selectedPlace ?? fallbackPlace, 0.18),
+  );
 
-  const animateToRegion = (nextRegion: Region, duration = 420) => {
+  const animateToRegion = useCallback((nextRegion: Region, duration = 420) => {
     setRegion(nextRegion);
     mapRef.current?.animateToRegion(nextRegion, duration);
-  };
+  }, []);
 
-  const focusLocation = (location: TravelLocation, delta = Math.min(Math.max(region.latitudeDelta, 1.8), 5.8)) => {
-    animateToRegion(createRegion(location, delta));
-  };
+  const focusPlace = useCallback(
+    (place: GuidePlace, delta: number) => {
+      animateToRegion(createRegion(place, delta));
+    },
+    [animateToRegion],
+  );
 
-  const fitVisibleLocations = () => {
-    if (filteredLocations.length === 0) {
+  const fitVisiblePlaces = useCallback(() => {
+    if (filteredPlaces.length === 0) {
       return;
     }
 
-    if (filteredLocations.length === 1) {
-      focusLocation(filteredLocations[0], 3.2);
+    if (filteredPlaces.length === 1) {
+      focusPlace(filteredPlaces[0], 0.08);
       return;
     }
 
     mapRef.current?.fitToCoordinates(
-      filteredLocations.map(location => location.coordinates),
+      filteredPlaces
+        .map(place => place.coordinates)
+        .filter(
+          (
+            coordinates,
+          ): coordinates is NonNullable<GuidePlace['coordinates']> =>
+            Boolean(coordinates),
+        ),
       {
         animated: true,
         edgePadding: {
           top: layout.androidTopInset + 150,
-          right: 66,
+          right: 58,
           bottom: bottomPanelOffset + 132,
           left: 46,
         },
       },
     );
-  };
+  }, [bottomPanelOffset, filteredPlaces, focusPlace]);
 
-  const selectLocation = (location: TravelLocation) => {
-    onSelectLocation(location.id);
-    focusLocation(location, Math.min(Math.max(region.latitudeDelta, 1.8), 4.2));
+  const selectPlace = (place: GuidePlace) => {
+    onSelectPlace(place.id);
+    focusPlace(place, Math.min(Math.max(region.latitudeDelta, 0.05), 0.2));
   };
 
   const zoomMap = (scale: number) => {
     const nextRegion = {
       ...region,
-      latitudeDelta: clamp(region.latitudeDelta * scale, 0.04, 28),
-      longitudeDelta: clamp(region.longitudeDelta * scale, 0.04, 28),
+      latitudeDelta: clamp(region.latitudeDelta * scale, 0.01, 1.1),
+      longitudeDelta: clamp(region.longitudeDelta * scale, 0.01, 1.1),
     };
 
     animateToRegion(nextRegion, 260);
   };
 
   const centerMap = () => {
-    if (selectedLocation) {
-      focusLocation(selectedLocation, Math.min(Math.max(region.latitudeDelta, 1.8), 4.2));
+    if (selectedPlace) {
+      focusPlace(
+        selectedPlace,
+        Math.min(Math.max(region.latitudeDelta, 0.05), 0.2),
+      );
       return;
     }
 
-    fitVisibleLocations();
+    fitVisiblePlaces();
   };
 
   useEffect(() => {
-    if (selectedLocation) {
-      focusLocation(selectedLocation, Math.min(Math.max(region.latitudeDelta, 1.8), 4.2));
+    if (selectedPlace) {
+      focusPlace(selectedPlace, 0.12);
     }
-  }, [selectedLocationId]);
+  }, [focusPlace, selectedPlace]);
 
   useEffect(() => {
-    if (selectedLocation && !filteredLocations.some(location => location.id === selectedLocation.id)) {
-      onSelectLocation('');
+    if (
+      selectedPlace &&
+      !filteredPlaces.some(place => place.id === selectedPlace.id)
+    ) {
+      onSelectPlace('');
     }
 
-    const timeout = setTimeout(fitVisibleLocations, 250);
+    const timeout = setTimeout(fitVisiblePlaces, 250);
     return () => clearTimeout(timeout);
-  }, [category]);
+  }, [filteredPlaces, fitVisiblePlaces, onSelectPlace, selectedPlace]);
 
   return (
     <View style={styles.root}>
@@ -128,33 +174,41 @@ export function MapScreen({selectedLocationId, onSelectLocation, onOpenLocationD
           provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
           customMapStyle={darkMapStyle}
           initialRegion={region}
-          onMapReady={fitVisibleLocations}
+          onMapReady={fitVisiblePlaces}
           onRegionChangeComplete={setRegion}>
-          {filteredLocations.map(location => (
-            <Marker
-              key={location.id}
-              coordinate={location.coordinates}
-              anchor={{x: 0.5, y: 0.5}}
-              zIndex={selectedLocationId === location.id ? 2 : 1}
-              onPress={() => selectLocation(location)}>
-              <View style={[styles.markerOuter, selectedLocationId === location.id && styles.markerOuterActive]}>
+          {filteredPlaces.map(place =>
+            place.coordinates ? (
+              <Marker
+                key={place.id}
+                coordinate={place.coordinates}
+                anchor={{x: 0.5, y: 0.5}}
+                zIndex={selectedPlaceId === place.id ? 2 : 1}
+                onPress={() => selectPlace(place)}>
                 <View
                   style={[
-                    styles.markerInner,
-                    selectedLocationId === location.id && styles.markerInnerActive,
-                    {backgroundColor: categoryColors[location.category]},
-                  ]}
-                />
-              </View>
-            </Marker>
-          ))}
+                    styles.markerOuter,
+                    selectedPlaceId === place.id && styles.markerOuterActive,
+                  ]}>
+                  <View
+                    style={[
+                      styles.markerInner,
+                      selectedPlaceId === place.id && styles.markerInnerActive,
+                      {backgroundColor: guideCategoryColors[place.category]},
+                    ]}
+                  />
+                </View>
+              </Marker>
+            ) : null,
+          )}
         </MapView>
         <View style={styles.mapShade} pointerEvents="none" />
         <View style={styles.headerWrap}>
-          <AppHeader title="Map" action={<View />} />
+          <AppHeader title="Guide Map" action={<View />} />
         </View>
         {!filterOpen ? (
-          <Pressable onPress={() => setFilterOpen(true)} style={[styles.filterButton, shadow]}>
+          <Pressable
+            onPress={() => setFilterOpen(true)}
+            style={[styles.filterButton, shadow]}>
             <Text style={styles.filterIcon}>☰</Text>
           </Pressable>
         ) : null}
@@ -166,29 +220,41 @@ export function MapScreen({selectedLocationId, onSelectLocation, onOpenLocationD
             <View style={styles.controlDivider} />
             <MapControl label="⌖" onPress={centerMap} />
             <View style={styles.controlDivider} />
-            <MapControl label="All" onPress={fitVisibleLocations} wide />
+            <MapControl label="All" onPress={fitVisiblePlaces} wide />
           </View>
         ) : null}
         {filterOpen ? (
           <View style={[styles.filterPanel, shadow]}>
             <View style={styles.filterTop}>
-              <Text style={styles.filterTitle}>Filter by Category</Text>
-              <Pressable onPress={() => setFilterOpen(false)} style={styles.closeButton}>
+              <Text style={styles.filterTitle}>Map Filters</Text>
+              <Pressable
+                onPress={() => setFilterOpen(false)}
+                style={styles.closeButton}>
                 <Text style={styles.closeText}>×</Text>
               </Pressable>
             </View>
             <View style={styles.filterChips}>
-              {travelCategories.map(item => {
-                const active = item.id === category;
-                const dotColor = item.id === 'all' ? colors.yellow : categoryColors[item.id];
+              {filters.map(item => {
+                const active = item.id === filter;
+                const dotColor =
+                  item.id === 'all'
+                    ? colors.yellow
+                    : guideCategoryColors[item.id];
                 return (
                   <Pressable
                     key={item.id}
-                    onPress={() => setCategory(item.id)}
-                    style={[styles.filterChip, active && styles.filterChipActive]}>
+                    onPress={() => setFilter(item.id)}
+                    style={[
+                      styles.filterChip,
+                      active && styles.filterChipActive,
+                    ]}>
                     <View style={[styles.dot, {backgroundColor: dotColor}]} />
-                    <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-                      {item.label.replace(' Escapes', '').replace(' & Scenic', '')}
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        active && styles.filterChipTextActive,
+                      ]}>
+                      {item.label}
                     </Text>
                   </Pressable>
                 );
@@ -196,24 +262,35 @@ export function MapScreen({selectedLocationId, onSelectLocation, onOpenLocationD
             </View>
           </View>
         ) : null}
-        {selectedLocation ? (
-          <View style={[styles.detailCard, {bottom: bottomPanelOffset}, shadow]}>
-            <Pressable onPress={() => onSelectLocation('')} style={styles.detailClose}>
+        {selectedPlace ? (
+          <View
+            style={[styles.detailCard, {bottom: bottomPanelOffset}, shadow]}>
+            <Pressable
+              onPress={() => onSelectPlace('')}
+              style={styles.detailClose}>
               <Text style={styles.detailCloseText}>×</Text>
             </Pressable>
-            <Image source={selectedLocation.image} style={styles.detailImage} />
+            <Image source={selectedPlace.image} style={styles.detailImage} />
             <View style={styles.detailBody}>
-              <Text style={styles.detailTitle}>{selectedLocation.name}</Text>
-              <Text style={styles.detailCoords}>
-                📍 {selectedLocation.coordinates.latitude.toFixed(4)}° N,{' '}
-                {Math.abs(selectedLocation.coordinates.longitude).toFixed(4)}° W
+              <Text style={styles.detailCategory}>
+                {guideCategoryLabels[selectedPlace.category]}
               </Text>
-              <Text style={styles.detailText}>{selectedLocation.shortDescription}</Text>
+              <Text style={styles.detailTitle}>{selectedPlace.name}</Text>
+              <Text style={styles.detailText}>
+                {selectedPlace.shortDescription}
+              </Text>
               <View style={styles.detailActions}>
-                <Pressable onPress={() => onOpenLocationDetails(selectedLocation.id)} style={styles.detailInfoButton}>
-                  <Text style={styles.detailInfoText}>ℹ️ Details</Text>
+                <Pressable
+                  onPress={() => onOpenPlaceDetails(selectedPlace.id)}
+                  style={styles.detailInfoButton}>
+                  <Text style={styles.detailInfoText}>Details</Text>
                 </Pressable>
-                <GradientButton title="Directions" icon="✈️" onPress={() => openDirections(selectedLocation)} style={styles.detailMapButton} />
+                <GradientButton
+                  title="Directions"
+                  icon="⌖"
+                  onPress={() => openDirections(selectedPlace)}
+                  style={styles.detailMapButton}
+                />
               </View>
             </View>
           </View>
@@ -225,10 +302,10 @@ export function MapScreen({selectedLocationId, onSelectLocation, onOpenLocationD
   );
 }
 
-function createRegion(location: TravelLocation, delta: number): Region {
+function createRegion(place: GuidePlace, delta: number): Region {
   return {
-    latitude: location.coordinates.latitude,
-    longitude: location.coordinates.longitude,
+    latitude: place.coordinates?.latitude ?? 44.64641,
+    longitude: place.coordinates?.longitude ?? -79.3504,
     latitudeDelta: delta,
     longitudeDelta: delta,
   };
@@ -238,10 +315,13 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function openDirections(location: TravelLocation) {
-  const latitude = location.coordinates.latitude;
-  const longitude = location.coordinates.longitude;
-  const label = encodeURIComponent(location.name);
+function openDirections(place: GuidePlace) {
+  if (!place.coordinates) {
+    return;
+  }
+
+  const {latitude, longitude} = place.coordinates;
+  const label = encodeURIComponent(place.name);
   const url =
     Platform.OS === 'ios'
       ? `http://maps.apple.com/?ll=${latitude},${longitude}&q=${label}`
@@ -260,7 +340,13 @@ function MapControl({
   onPress: () => void;
 }): React.JSX.Element {
   return (
-    <Pressable onPress={onPress} style={({pressed}) => [styles.controlButton, wide && styles.controlButtonWide, pressed && styles.pressed]}>
+    <Pressable
+      onPress={onPress}
+      style={({pressed}) => [
+        styles.controlButton,
+        wide && styles.controlButtonWide,
+        pressed && styles.pressed,
+      ]}>
       <Text style={styles.controlText} numberOfLines={1} adjustsFontSizeToFit>
         {label}
       </Text>
@@ -271,12 +357,21 @@ function MapControl({
 function Legend({bottomOffset}: {bottomOffset: number}): React.JSX.Element {
   return (
     <View style={[styles.legend, {bottom: bottomOffset}]}>
-      <Text style={styles.legendTitle}>Tap any pin to view location details</Text>
+      <Text style={styles.legendTitle}>
+        Tap any pin to open details or directions
+      </Text>
       <View style={styles.legendRow}>
-        {(['lakeside', 'nature', 'beach', 'waterfront'] as Exclude<TravelCategory, 'all'>[]).map(item => (
+        {(
+          ['resort', 'dining', 'entertainment', 'nearby'] as GuideCategory[]
+        ).map(item => (
           <View key={item} style={styles.legendItem}>
-            <View style={[styles.legendDot, {backgroundColor: categoryColors[item]}]} />
-            <Text style={styles.legendText}>{item[0].toUpperCase() + item.slice(1)}</Text>
+            <View
+              style={[
+                styles.legendDot,
+                {backgroundColor: guideCategoryColors[item]},
+              ]}
+            />
+            <Text style={styles.legendText}>{guideCategoryLabels[item]}</Text>
           </View>
         ))}
       </View>
@@ -294,7 +389,7 @@ const styles = StyleSheet.create({
   },
   mapShade: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.16)',
+    backgroundColor: 'rgba(0, 0, 0, 0.12)',
   },
   headerWrap: {
     position: 'absolute',
@@ -438,7 +533,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 20,
     right: 20,
-    bottom: layout.tabHeight + layout.navGap + 16,
     borderRadius: layout.cardRadius,
     borderWidth: 1,
     borderColor: colors.border,
@@ -477,7 +571,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 20,
     right: 20,
-    bottom: layout.tabHeight + layout.navGap + 16,
     borderRadius: layout.cardRadius,
     borderWidth: 1,
     borderColor: colors.border,
@@ -503,22 +596,23 @@ const styles = StyleSheet.create({
   },
   detailImage: {
     width: '100%',
-    height: 142,
+    height: 134,
     resizeMode: 'cover',
   },
   detailBody: {
     padding: 16,
-    gap: 10,
+    gap: 9,
+  },
+  detailCategory: {
+    color: colors.gold,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
   },
   detailTitle: {
     color: colors.text,
     fontSize: 21,
     fontWeight: '900',
-  },
-  detailCoords: {
-    color: colors.gold,
-    fontSize: 13,
-    fontWeight: '800',
   },
   detailText: {
     color: colors.muted,

@@ -1,5 +1,11 @@
 import React from 'react';
-import {Pressable, StyleSheet, Text, useWindowDimensions, View} from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import {colors, layout, shadow} from '../theme/theme';
 import type {MainTab} from '../types/app';
 
@@ -9,11 +15,10 @@ type Props = {
 };
 
 const tabs: {key: MainTab; label: string; icon: string}[] = [
-  {key: 'room', label: 'Room Service', icon: '🍽️'},
-  {key: 'requests', label: 'Requests', icon: '💬'},
-  {key: 'entertainment', label: 'Entertainment', icon: '📅'},
-  {key: 'climate', label: 'Climate', icon: '🌡️'},
-  {key: 'travel', label: 'Travel', icon: '📍'},
+  {key: 'guide', label: 'Guide', icon: '◆'},
+  {key: 'dining', label: 'Dining', icon: '🍽️'},
+  {key: 'itinerary', label: 'Itinerary', icon: '✓'},
+  {key: 'nearby', label: 'Nearby', icon: '📍'},
   {key: 'map', label: 'Map', icon: '🗺️'},
 ];
 
@@ -29,10 +34,26 @@ export function BottomTabBar({activeTab, onSelect}: Props): React.JSX.Element {
           <Pressable
             key={tab.key}
             onPress={() => onSelect(tab.key)}
-            style={({pressed}) => [styles.item, compact && styles.itemCompact, active && styles.activeItem, pressed && styles.pressed]}>
-            <Text style={[styles.icon, compact && styles.iconCompact, active && styles.activeText]}>{tab.icon}</Text>
+            style={({pressed}) => [
+              styles.item,
+              compact && styles.itemCompact,
+              active && styles.activeItem,
+              pressed && styles.pressed,
+            ]}>
             <Text
-              style={[styles.label, compact && styles.labelCompact, active && styles.activeText]}
+              style={[
+                styles.icon,
+                compact && styles.iconCompact,
+                active && styles.activeText,
+              ]}>
+              {tab.icon}
+            </Text>
+            <Text
+              style={[
+                styles.label,
+                compact && styles.labelCompact,
+                active && styles.activeText,
+              ]}
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.62}>
